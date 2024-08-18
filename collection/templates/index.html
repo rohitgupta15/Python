@@ -1,0 +1,38 @@
+<html>
+    <head>
+        <title>{{title}}</title>
+        <style>
+            .main{
+                width: 1000px;
+                font-size:30px;
+                color: Green;
+
+            }
+        </style>
+    </head>
+        <body>
+           <div class="main"> Welcome to HTML Page...{{bdata}}</div>
+           {%for n in clist%}
+            <div>{{forloop.counter}}.{{n}}</div>
+            <!--<div>{{forloop.revcounter}}{{n}}</div>   reverse counter-->
+            {% endfor %}
+            <table border=1 cellpadding=10px><tr>
+                <th>name</th>
+                <th>phone</th>
+                </tr>
+                {%for a in studentdetails %}
+                    <tr><td>{{a.name}}</td><td>{{a.phone}}</td></tr>
+                    {%endfor%}
+                <tr>
+
+                </tr>
+
+            </table>
+        {%for b in number%}
+            {% if b > 20 %}
+            
+           <div>{{b}}</div>
+           {% endif %}
+        {%endfor%}
+        </body>
+</html>
