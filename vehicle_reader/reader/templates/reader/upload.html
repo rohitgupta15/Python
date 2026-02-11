@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Vehicle Number Plate Reader</title>
+</head>
+<body>
+    <h1>Upload Vehicle Image</h1>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Upload</button>
+    </form>
+
+    {% if plate_text %}
+        <h2>Detected Plate: {{ plate_text }}</h2>
+    {% endif %}
+
+    {% if vehicle_info %}
+        <h3>Vehicle Details:</h3>
+        <ul>
+            <li>Owner: {{ vehicle_info.owner_name }}</li>
+            <li>Type: {{ vehicle_info.vehicle_type }}</li>
+            <li>Registered: {{ vehicle_info.registration_date }}</li>
+        </ul>
+    {% endif %}
+</body>
+</html>
