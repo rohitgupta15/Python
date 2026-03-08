@@ -1,0 +1,17 @@
+{% extends "salon/base.html" %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<section class="auth-wrap">
+  <h2>Owner Login</h2>
+  <form method="post" class="form-card">
+    {% csrf_token %}
+    <label>Username <input type="text" name="username" required /></label>
+    <label>Password <input type="password" name="password" required /></label>
+    <p><a href="{% url 'password_reset_otp_request' %}">Forgot password via OTP (SMS/WhatsApp)?</a></p>
+    <p><a href="{% url 'password_reset' %}">Forgot password via Email?</a></p>
+    <button class="btn" type="submit">Login</button>
+  </form>
+</section>
+{% endblock %}

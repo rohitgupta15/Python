@@ -1,0 +1,568 @@
+{% extends "salon/base.html" %}
+
+{% block title %}Reports - {{ salon.name }}{% endblock %}
+
+{% block content %}
+<section class="row-head">
+  <h2>Sales & Profit Report - {{ salon.name }}</h2>
+</section>
+{% include "salon/includes/owner_portal_nav.html" with active_tab="reports" %}
+<section class="panel">
+  <div class="action-row">
+    <button class="btn btn-outline report-settings-toggle" type="button" id="open-report-settings" aria-expanded="false" aria-controls="report-settings-panel">Report Builder Settings</button>
+  </div>
+</section>
+
+<section class="panel report-builder-panel is-hidden" id="report-settings-panel">
+  <h3>Report Builder Settings</h3>
+  <p class="hint">Customize this report page layout and visible sections.</p>
+  <form method="post" class="form-card report-builder-form">
+    {% csrf_token %}
+    <input type="hidden" name="form_type" value="report_settings" />
+    {{ report_setting_form.as_p }}
+    <button class="btn" type="submit">Save Report Settings</button>
+  </form>
+</section>
+
+<section class="panel">
+  <div class="action-row">
+    <a class="btn btn-outline" href="{% url 'salon_reports' salon.slug %}?period=daily">Daily</a>
+    <a class="btn btn-outline" href="{% url 'salon_reports' salon.slug %}?period=weekly">Weekly</a>
+    <a class="btn btn-outline" href="{% url 'salon_reports' salon.slug %}?period=monthly">Monthly</a>
+  </div>
+</section>
+
+{% if show_metrics_summary %}
+<section class="panel report-visual-dashboard report-layout-{{ report_setting.layout_style }}">
+  {% if show_kpi_strip %}
+  <div class="report-kpi-row">
+    <article class="report-kpi-card kpi-blue">
+      <p class="kpi-label">Total Sale</p>
+      <h3>{{ sales_total|floatformat:0 }}</h3>
+    </article>
+    <article class="report-kpi-card kpi-green">
+      <p class="kpi-label">Last Month Sale</p>
+      <h3>{{ last_month_sale|floatformat:0 }}</h3>
+    </article>
+    <article class="report-kpi-card kpi-violet">
+      <p class="kpi-label">Total Revenue</p>
+      <h3>{{ received_total|floatformat:0 }}</h3>
+    </article>
+    <article class="report-kpi-card kpi-graphite">
+      <p class="kpi-label">Total Customers</p>
+      <h3>{{ total_customer_count }}</h3>
+    </article>
+  </div>
+  {% endif %}
+
+  <div class="report-main-grid">
+    {% if show_sales_expense_chart %}
+    <article class="report-chart-card">
+      <div class="report-chart-head">
+        <h3>Sale Statics</h3>
+        <span class="hint">{{ period|title }}</span>
+      </div>
+      <div class="report-bars">
+        {% for point in chart_points %}
+          <div class="report-bar-group">
+            <div class="report-bar-col">
+              <span class="report-bar sale" style="height: {{ point.sale_height }}%"></span>
+              <span class="report-bar expense" style="height: {{ point.expense_height }}%"></span>
+            </div>
+            <small>{{ point.label }}</small>
+          </div>
+        {% endfor %}
+      </div>
+      <div class="report-legend">
+        <span class="dot dot-sale"></span> Sales
+        <span class="dot dot-expense"></span> Expense
+      </div>
+    </article>
+    {% endif %}
+
+    {% if show_expense_donut %}
+    <article class="report-donut-card">
+      <h3>Expense Split</h3>
+      <div class="report-donut" style="--fill: {{ expense_ratio }}%; --donut-color: #ef4444;">
+        <strong>{{ expense_ratio }}%</strong>
+      </div>
+      <p class="hint">Expense vs Total Sales</p>
+    </article>
+    {% endif %}
+
+    {% if show_collections_donut %}
+    <article class="report-donut-card">
+      <h3>Collections</h3>
+      <div class="report-donut" style="--fill: {{ received_ratio }}%; --donut-color: #16a34a;">
+        <strong>{{ received_ratio }}%</strong>
+      </div>
+      <p class="hint">Received ({{ received_ratio }}%) / Pending ({{ pending_ratio }}%)</p>
+    </article>
+    {% endif %}
+  </div>
+
+  {% if show_mini_cards %}
+  <div class="report-mini-row">
+    <article class="report-mini-card">
+      <h4>Rs {{ yearly_sales|floatformat:0 }}</h4>
+      <p>This Year Sale Report</p>
+    </article>
+    <article class="report-mini-card">
+      <h4>Rs {{ yearly_profit|floatformat:0 }}</h4>
+      <p>Yearly Profit</p>
+    </article>
+    <article class="report-mini-card">
+      <h4>{{ yearly_visits }} Visits</h4>
+      <p>Yearly Traffic</p>
+    </article>
+  </div>
+  {% endif %}
+</section>
+
+<section class="panel report-summary-panel report-layout-{{ report_setting.layout_style }}">
+  <p><strong>Period:</strong> {{ period|title }} ({{ start_date }} to {{ end_date }})</p>
+  <div class="card-grid report-grid">
+    <article class="card">
+      <h3>Total Sales (Bills)</h3>
+      <p class="report-value">Rs {{ sales_total|floatformat:2 }}</p>
+    </article>
+    <article class="card">
+      <h3>Total Received</h3>
+      <p class="report-value">Rs {{ received_total|floatformat:2 }}</p>
+    </article>
+    <article class="card">
+      <h3>Total Pending</h3>
+      <p class="report-value">Rs {{ pending_total|floatformat:2 }}</p>
+    </article>
+    <article class="card">
+      <h3>Visit Revenue</h3>
+      <p class="report-value">Rs {{ visit_total|floatformat:2 }}</p>
+    </article>
+    {% if show_metric_expense %}
+      <article class="card">
+        <h3>Expenses</h3>
+        <p class="report-value">Rs {{ expense_total|floatformat:2 }}</p>
+      </article>
+      <article class="card">
+        <h3>Manual Expenses</h3>
+        <p class="report-value">Rs {{ manual_expense_total|floatformat:2 }}</p>
+      </article>
+      <article class="card">
+        <h3>Inventory Expenses</h3>
+        <p class="report-value">Rs {{ inventory_expense_total|floatformat:2 }}</p>
+      </article>
+    {% endif %}
+    <article class="card">
+      <h3>Other Income</h3>
+      <p class="report-value">Rs {{ other_income_total|floatformat:2 }}</p>
+    </article>
+    {% if show_metric_profit %}
+      <article class="card">
+        <h3>Profit</h3>
+        <p class="report-value">Rs {{ profit_value|floatformat:2 }}</p>
+      </article>
+    {% endif %}
+    {% if show_metric_loss %}
+      <article class="card">
+        <h3>Loss</h3>
+        <p class="report-value">Rs {{ loss_value|floatformat:2 }}</p>
+      </article>
+    {% endif %}
+    {% if show_metric_customers %}
+      <article class="card">
+        <h3>Customers</h3>
+        <p class="report-value">{{ total_customer_count }}</p>
+      </article>
+    {% endif %}
+    {% if show_metric_workers %}
+      <article class="card">
+        <h3>Workers</h3>
+        <p class="report-value">{{ total_worker_count }}</p>
+      </article>
+    {% endif %}
+    {% if show_metric_inventory %}
+      <article class="card">
+        <h3>Inventory Cost</h3>
+        <p class="report-value">Rs {{ inventory_total_cost|floatformat:2 }}</p>
+      </article>
+    {% endif %}
+  </div>
+</section>
+{% endif %}
+
+{% if show_entry_forms or show_profit_entries %}
+<section class="edit-grid">
+  {% if show_entry_forms %}
+  <div class="panel">
+    <h3>Add Profit Entry</h3>
+    <p class="hint">Use this for expense or other income not already captured in billing.</p>
+    <form method="post" class="form-card">
+      {% csrf_token %}
+      <input type="hidden" name="form_type" value="add_profit_entry" />
+      {{ form.as_p }}
+      <button class="btn" type="submit">Add Entry</button>
+    </form>
+  </div>
+
+  <div class="panel">
+    <h3>Add Inventory Item</h3>
+    <p class="hint">Example: Facial cream, hair colour, shampoo, wax.</p>
+    <form method="post" class="form-card">
+      {% csrf_token %}
+      <input type="hidden" name="form_type" value="add_inventory_entry" />
+      {{ inventory_form.as_p }}
+      <button class="btn" type="submit">Add Inventory</button>
+    </form>
+  </div>
+  {% endif %}
+
+  {% if show_profit_entries %}
+  <div class="panel">
+    <h3>Profit Entries ({{ period|title }})</h3>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Type</th>
+            <th>Title</th>
+            <th>Amount</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for entry in profit_entries %}
+            <tr>
+              <td>{{ entry.entry_date }}</td>
+              <td>{{ entry.get_entry_type_display }}</td>
+              <td>{{ entry.title }}</td>
+              <td>Rs {{ entry.amount|floatformat:2 }}</td>
+              <td>{{ entry.notes|default:"-" }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="5">No entries for selected period.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+</section>
+{% endif %}
+
+{% if show_inventory_list %}
+<section class="panel">
+  <h3>Inventory List ({{ period|title }})</h3>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Item</th>
+          <th>Category</th>
+          <th>Qty</th>
+          <th>Unit Cost</th>
+          <th>Total Cost</th>
+          <th>Expense?</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in inventory_entries %}
+          <tr>
+            <td>{{ item.purchase_date }}</td>
+            <td>{{ item.item_name }}</td>
+            <td>{{ item.category|default:"-" }}</td>
+            <td>{{ item.quantity }} {{ item.get_unit_display }}</td>
+            <td>Rs {{ item.unit_cost|floatformat:2 }}</td>
+            <td>Rs {{ item.total_cost|floatformat:2 }}</td>
+            <td>{% if item.mark_as_expense %}Yes{% else %}No{% endif %}</td>
+            <td>{{ item.notes|default:"-" }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="8">No inventory items in selected period.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+{% if show_monthly_inventory %}
+<section class="panel">
+  <h3>Monthly Inventory Summary ({{ end_date|date:"Y" }})</h3>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Month</th>
+          <th>Total Inventory Cost</th>
+          <th>Marked Expense Cost</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in monthly_inventory %}
+          <tr>
+            <td>{{ row.month|date:"F Y" }}</td>
+            <td>Rs {{ row.monthly_total_cost|default:0|floatformat:2 }}</td>
+            <td>Rs {{ row.monthly_expense_cost|default:0|floatformat:2 }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="3">No monthly inventory data yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+{% if show_sales_bills %}
+<section class="panel">
+  <h3>Sales Bills ({{ period|title }})</h3>
+  <form method="get" class="action-row" style="margin-bottom: 12px;">
+    <input type="hidden" name="period" value="{{ period }}" />
+    <label for="bill_date_from" class="hint">From</label>
+    <input type="date" id="bill_date_from" name="bill_date_from" value="{{ bill_date_from }}" />
+    <label for="bill_date_to" class="hint">To</label>
+    <input type="date" id="bill_date_to" name="bill_date_to" value="{{ bill_date_to }}" />
+    <button class="btn btn-outline" type="submit">Filter Bills</button>
+    <a class="btn btn-outline" href="{% url 'salon_reports' salon.slug %}?period={{ period }}">Clear</a>
+  </form>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Bill No</th>
+          <th>Date</th>
+          <th>Customer</th>
+          <th>Total</th>
+          <th>Received</th>
+          <th>Balance</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for bill in bills_page %}
+          <tr>
+            <td>{{ bill.bill_number }}</td>
+            <td>{{ bill.bill_date }}</td>
+            <td>{{ bill.customer.full_name|default:"Walk-in" }}</td>
+            <td>Rs {{ bill.total_amount|floatformat:2 }}</td>
+            <td>Rs {{ bill.amount_received|floatformat:2 }}</td>
+            <td>Rs {{ bill.balance_due|floatformat:2 }}</td>
+            <td>{{ bill.get_payment_status_display }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="7">No bills in selected period.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if bills_page.paginator.num_pages > 1 %}
+    <div class="action-row" style="margin-top: 12px;">
+      {% if bills_page.has_previous %}
+        <a class="btn btn-outline" href="?{{ bill_filter_query }}&bill_page=1">First</a>
+        <a class="btn btn-outline" href="?{{ bill_filter_query }}&bill_page={{ bills_page.previous_page_number }}">Previous</a>
+      {% endif %}
+      <span class="hint">Page {{ bills_page.number }} of {{ bills_page.paginator.num_pages }}</span>
+      {% if bills_page.has_next %}
+        <a class="btn btn-outline" href="?{{ bill_filter_query }}&bill_page={{ bills_page.next_page_number }}">Next</a>
+        <a class="btn btn-outline" href="?{{ bill_filter_query }}&bill_page={{ bills_page.paginator.num_pages }}">Last</a>
+      {% endif %}
+    </div>
+  {% endif %}
+</section>
+{% endif %}
+
+<style>
+.report-builder-panel {
+  border: 1px solid #c7d2fe;
+  background: linear-gradient(135deg, #eef2ff 0%, #f5f3ff 45%, #ecfeff 100%);
+}
+.report-builder-form {
+  border: 1px dashed #6366f1;
+  background: rgba(255, 255, 255, 0.9);
+}
+.report-settings-toggle {
+  border-color: #6366f1;
+  color: #3730a3;
+}
+.report-settings-toggle:hover {
+  background: #e0e7ff;
+}
+.report-visual-dashboard {
+  background: #eef2ff;
+  border: 1px solid #dbeafe;
+}
+.report-layout-financial_focus .report-kpi-card {
+  filter: saturate(1.08);
+}
+.report-layout-inventory_focus {
+  background: #ecfdf5;
+  border-color: #bbf7d0;
+}
+.report-summary-panel.report-layout-inventory_focus {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+}
+.report-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.report-kpi-card {
+  border-radius: 10px;
+  color: #fff;
+  padding: 14px 16px;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.16);
+}
+.report-kpi-card h3 {
+  margin: 6px 0 0;
+  font-size: 1.9rem;
+}
+.report-kpi-card .kpi-label {
+  margin: 0;
+  opacity: 0.92;
+}
+.kpi-blue { background: linear-gradient(135deg, #0284c7, #0ea5e9); }
+.kpi-green { background: linear-gradient(135deg, #16a34a, #22c55e); }
+.kpi-violet { background: linear-gradient(135deg, #7c3aed, #a855f7); }
+.kpi-graphite { background: linear-gradient(135deg, #111827, #374151); }
+.report-main-grid {
+  display: grid;
+  grid-template-columns: 2.2fr 1fr 1fr;
+  gap: 12px;
+}
+.report-chart-card,
+.report-donut-card,
+.report-mini-card {
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+}
+.report-chart-card {
+  padding: 14px;
+}
+.report-chart-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.report-chart-head h3 {
+  margin: 0;
+}
+.report-bars {
+  margin-top: 10px;
+  height: 220px;
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 8px;
+}
+.report-bar-group {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.report-bar-col {
+  height: 190px;
+  width: 100%;
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  gap: 4px;
+}
+.report-bar {
+  width: 10px;
+  border-radius: 6px 6px 0 0;
+  min-height: 4px;
+}
+.report-bar.sale { background: #0ea5e9; }
+.report-bar.expense { background: #ef4444; }
+.report-legend {
+  margin-top: 10px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 5px;
+}
+.dot-sale { background: #0ea5e9; }
+.dot-expense { background: #ef4444; }
+.report-donut-card {
+  padding: 14px;
+  text-align: center;
+}
+.report-donut {
+  width: 160px;
+  height: 160px;
+  margin: 12px auto;
+  border-radius: 50%;
+  background: conic-gradient(var(--donut-color) var(--fill), #e5e7eb 0);
+  display: grid;
+  place-items: center;
+  position: relative;
+}
+.report-donut::after {
+  content: "";
+  width: 112px;
+  height: 112px;
+  border-radius: 50%;
+  background: #fff;
+  position: absolute;
+}
+.report-donut strong {
+  position: relative;
+  z-index: 1;
+  font-size: 1.25rem;
+}
+.report-mini-row {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.report-mini-card {
+  padding: 14px;
+}
+.report-mini-card h4 {
+  margin: 0;
+  font-size: 1.8rem;
+}
+.report-mini-card p {
+  margin: 6px 0 0;
+  color: #64748b;
+}
+@media (max-width: 1120px) {
+  .report-kpi-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .report-main-grid {
+    grid-template-columns: 1fr;
+  }
+  .report-mini-row {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+<script>
+  (function () {
+    const toggleButton = document.getElementById("open-report-settings");
+    const panel = document.getElementById("report-settings-panel");
+    if (!toggleButton || !panel) return;
+    toggleButton.addEventListener("click", function () {
+      const isHidden = panel.classList.toggle("is-hidden");
+      toggleButton.setAttribute("aria-expanded", String(!isHidden));
+    });
+  })();
+</script>
+{% endblock %}

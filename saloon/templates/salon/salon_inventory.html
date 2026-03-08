@@ -1,0 +1,108 @@
+{% extends "salon/base.html" %}
+
+{% block title %}Inventory - {{ salon.name }}{% endblock %}
+
+{% block content %}
+<section class="row-head">
+  <h2>Inventory Management - {{ salon.name }}</h2>
+</section>
+{% include "salon/includes/owner_portal_nav.html" with active_tab="inventory" %}
+
+<section class="panel">
+  <form method="get" class="action-row">
+    <label for="month" class="hint">Month</label>
+    <input type="month" id="month" name="month" value="{{ selected_month }}" />
+    <button class="btn btn-outline" type="submit">Apply</button>
+  </form>
+</section>
+
+<section class="panel">
+  <div class="card-grid report-grid">
+    <article class="card">
+      <h3>Total Inventory Cost</h3>
+      <p class="report-value">Rs {{ total_cost|floatformat:2 }}</p>
+    </article>
+    <article class="card">
+      <h3>Marked As Expense</h3>
+      <p class="report-value">Rs {{ expense_total|floatformat:2 }}</p>
+    </article>
+  </div>
+</section>
+
+<section class="edit-grid">
+  <div class="panel">
+    <h3>{% if editing_entry %}Edit Inventory Item{% else %}Add Inventory Item{% endif %}</h3>
+    <p class="hint">Example: Facial cream, hair colour, shampoo, wax.</p>
+    <form method="post" class="form-card">
+      {% csrf_token %}
+      {% if editing_entry %}
+        <input type="hidden" name="form_type" value="edit_inventory" />
+        <input type="hidden" name="inventory_id" value="{{ editing_entry.id }}" />
+      {% else %}
+        <input type="hidden" name="form_type" value="add_inventory" />
+      {% endif %}
+      {{ form.as_p }}
+      <div class="action-row">
+        <button class="btn" type="submit">{% if editing_entry %}Update Item{% else %}Add Item{% endif %}</button>
+        {% if editing_entry %}
+          <a class="btn btn-outline" href="{% url 'salon_inventory' salon.slug %}?month={{ selected_month }}">Cancel Edit</a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+
+  <div class="panel">
+    <h3>Inventory List ({{ selected_month }})</h3>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Item</th>
+            <th>Category</th>
+            <th>Quantity</th>
+            <th>Unit Cost</th>
+            <th>Total Cost</th>
+            <th>Expense</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for entry in entries %}
+            <tr>
+              <td>{{ entry.purchase_date }}</td>
+              <td>{{ entry.item_name }}</td>
+              <td>{{ entry.category|default:"-" }}</td>
+              <td>{{ entry.quantity }} {{ entry.get_unit_display }}</td>
+              <td>Rs {{ entry.unit_cost|floatformat:2 }}</td>
+              <td>Rs {{ entry.total_cost|floatformat:2 }}</td>
+              <td>{% if entry.mark_as_expense %}Yes{% else %}No{% endif %}</td>
+              <td>
+                <div class="action-row">
+                  <a class="btn btn-outline" href="{% url 'salon_inventory' salon.slug %}?month={{ selected_month }}&edit_id={{ entry.id }}">Edit</a>
+                  <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_type" value="toggle_inventory_expense" />
+                    <input type="hidden" name="inventory_id" value="{{ entry.id }}" />
+                    <button class="btn btn-outline" type="submit">
+                      {% if entry.mark_as_expense %}Unmark{% else %}Mark Expense{% endif %}
+                    </button>
+                  </form>
+                  <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_type" value="delete_inventory" />
+                    <input type="hidden" name="inventory_id" value="{{ entry.id }}" />
+                    <button class="btn btn-danger" type="submit">Delete</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="8">No inventory items for selected month.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+{% endblock %}

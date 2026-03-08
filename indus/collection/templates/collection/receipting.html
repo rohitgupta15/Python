@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Receipting Screen</title>
+    <style>
+      :root {
+        --ink: #0f172a;
+        --muted: #475569;
+        --bg: #f6f7fb;
+        --card: #ffffff;
+        --accent: #1d4ed8;
+        --accent-2: #0ea5e9;
+        --border: #e2e8f0;
+        --success: #16a34a;
+        --warn: #f59e0b;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Georgia", "Times New Roman", serif;
+        color: var(--ink);
+        background: radial-gradient(1000px 380px at 10% 0%, #dbeafe 0%, transparent 55%),
+                    radial-gradient(900px 320px at 90% 5%, #e0f2fe 0%, transparent 60%),
+                    var(--bg);
+      }
+      .page {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 28px 18px 56px;
+      }
+      .hero {
+        background: linear-gradient(135deg, #0f172a, #1e293b 65%, #0b1530);
+        color: #fff;
+        border-radius: 18px;
+        padding: 22px 26px;
+        display: flex;
+        gap: 18px;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: 0 14px 30px rgba(15, 23, 42, 0.2);
+      }
+      .hero h1 {
+        margin: 0 0 6px 0;
+        font-size: 28px;
+        letter-spacing: 0.3px;
+      }
+      .hero p {
+        margin: 0;
+        color: #dbeafe;
+        font-size: 14px;
+      }
+      .hero .total {
+        background: rgba(255, 255, 255, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        padding: 14px 18px;
+        border-radius: 14px;
+        text-align: right;
+      }
+      .hero .total .label { font-size: 12px; color: #bfdbfe; }
+      .hero .total .value { font-size: 26px; font-weight: bold; }
+      .grid {
+        display: grid;
+        grid-template-columns: 1.1fr 1.4fr;
+        gap: 22px;
+        margin-top: 22px;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 18px;
+        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+      }
+      .card h2 {
+        margin: 0 0 14px 0;
+        font-size: 18px;
+      }
+      form label { display: block; margin-top: 10px; font-size: 13px; color: var(--muted); }
+      input, textarea {
+        width: 100%;
+        margin-top: 6px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        font-family: "Arial", sans-serif;
+        font-size: 14px;
+      }
+      textarea { min-height: 80px; }
+      .btn {
+        display: inline-block;
+        padding: 9px 14px;
+        border-radius: 10px;
+        border: 0;
+        cursor: pointer;
+        font-weight: bold;
+        text-decoration: none;
+        font-size: 13px;
+      }
+      .btn-primary { background: var(--accent); color: white; }
+      .btn-outline { background: white; border: 1px solid var(--border); color: var(--ink); }
+      .btn-warn { background: var(--warn); color: #111827; }
+      .btn-small { padding: 6px 10px; font-size: 12px; }
+      .table-wrap { overflow: auto; border-radius: 12px; }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: "Arial", sans-serif;
+        font-size: 13px;
+      }
+      th, td { padding: 10px 12px; border-bottom: 1px solid var(--border); text-align: left; }
+      th { background: #f8fafc; font-weight: 700; color: var(--muted); }
+      tr:hover td { background: #f8fafc; }
+      .muted { color: var(--muted); font-size: 12px; }
+      .actions { display: flex; gap: 6px; }
+      .footer-actions { margin-top: 18px; display: flex; gap: 10px; }
+      @media (max-width: 900px) {
+        .grid { grid-template-columns: 1fr; }
+        .hero { flex-direction: column; align-items: flex-start; }
+        .hero .total { width: 100%; text-align: left; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div class="hero">
+        <div>
+          <h1>Receipting Screen</h1>
+          <p>Secure payment intake for Reception users.</p>
+        </div>
+        <div class="total">
+          <div class="label">Total Amount Collected</div>
+          <div class="value">₹ {{ total_amount }}</div>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <h2>Add Payment</h2>
+          <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn btn-primary">Add Payment</button>
+          </form>
+          <div class="footer-actions">
+            <a class="btn btn-outline" href="/">Back to Dashboard</a>
+            <a class="btn btn-warn" href="/admin/">Open Admin</a>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Payments List</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Payer</th>
+                  <th>Amount</th>
+                  <th>Method</th>
+                  <th>Reference</th>
+                  <th>Received At</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for payment in payments %}
+                  <tr>
+                    <td>{{ payment.payer_name }}</td>
+                    <td>₹ {{ payment.amount }}</td>
+                    <td>{{ payment.method|default:"-" }}</td>
+                    <td>{{ payment.reference|default:"-" }}</td>
+                    <td>{{ payment.received_at }}</td>
+                    <td>
+                      <div class="actions">
+                        <a class="btn btn-outline btn-small" href="/receipting/{{ payment.id }}/edit/">Update</a>
+                      </div>
+                    </td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="6" class="muted">No payments yet.</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

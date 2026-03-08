@@ -1,0 +1,224 @@
+{% extends "salon/base.html" %}
+
+{% block title %}Loyalty Program - {{ salon.name }}{% endblock %}
+
+{% block content %}
+<section class="row-head">
+  <h2>Loyalty and Rewards Program</h2>
+  <div class="action-row">
+    <a class="btn btn-outline" href="{% url 'salon_loyalty_settings' salon.slug %}">Settings</a>
+  </div>
+</section>
+{% include "salon/includes/owner_portal_nav.html" with active_tab="loyalty" %}
+
+{% if not loyalty_settings.is_active %}
+<div class="message error">
+  Loyalty program is currently inactive. Enable it in settings.
+</div>
+{% endif %}
+
+<section class="panel">
+  <h3>Program Overview</h3>
+  <div class="stats-grid">
+    <div class="stat-card">
+      <span class="stat-label">Total Points Outstanding</span>
+      <span class="stat-value">{{ total_points_outstanding }}</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Lifetime Points Earned</span>
+      <span class="stat-value">{{ total_lifetime_points }}</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Referral Credits Outstanding</span>
+      <span class="stat-value">{{ referral_credits_outstanding }}</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Points per Rs 1</span>
+      <span class="stat-value">{{ loyalty_settings.points_per_rupee }}</span>
+    </div>
+  </div>
+</section>
+
+<section class="panel">
+  <h3>Membership Tiers</h3>
+  <div class="stats-grid">
+    <div class="stat-card"><span class="stat-label">Bronze</span><span class="stat-value">{{ tier_summary.bronze }}</span></div>
+    <div class="stat-card"><span class="stat-label">Silver</span><span class="stat-value">{{ tier_summary.silver }}</span></div>
+    <div class="stat-card"><span class="stat-label">Gold</span><span class="stat-value">{{ tier_summary.gold }}</span></div>
+    <div class="stat-card"><span class="stat-label">Platinum</span><span class="stat-value">{{ tier_summary.platinum }}</span></div>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="row-head">
+    <h3>Birthday Coupons</h3>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="form_type" value="issue_birthday_coupons" />
+      <button class="btn btn-outline" type="submit">Issue Coupons For Current Month</button>
+    </form>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Code</th>
+          <th>Customer</th>
+          <th>Discount</th>
+          <th>Valid Till</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for coupon in active_coupons %}
+          <tr>
+            <td>{{ coupon.code }}</td>
+            <td>{{ coupon.customer.full_name }}</td>
+            <td>{{ coupon.discount_percent }}%</td>
+            <td>{{ coupon.valid_to }}</td>
+            <td>{% if coupon.is_redeemed %}Redeemed{% else %}Active{% endif %}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5">No active coupons.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="panel">
+  <h3>Top Referral Earners</h3>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Customer</th>
+          <th>Phone</th>
+          <th>Referral Credits</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for customer in top_referrers %}
+          <tr>
+            <td>{{ customer.full_name }}</td>
+            <td>{{ customer.phone }}</td>
+            <td>{{ customer.referral_credits }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="3">No referral credits yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="panel">
+  <h3>Top Customers by Points</h3>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Customer</th>
+          <th>Phone</th>
+          <th>Current Points</th>
+          <th>Lifetime Points</th>
+          <th>Tier</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for customer in top_customers %}
+          <tr>
+            <td>{{ customer.full_name }}</td>
+            <td>{{ customer.phone }}</td>
+            <td>{{ customer.loyalty_points }}</td>
+            <td>{{ customer.lifetime_points }}</td>
+            <td>{{ customer.get_membership_tier_display }}</td>
+            <td><a class="btn btn-outline" href="{% url 'customer_loyalty_detail' salon.slug customer.id %}">View</a></td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6">No customers have loyalty points yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if top_customers.has_other_pages %}
+    <div class="pagination">
+      {% if top_customers.has_previous %}
+        <a class="btn btn-outline" href="?{% if top_customers_querystring %}{{ top_customers_querystring }}&{% endif %}top_customers_page={{ top_customers.previous_page_number }}">Previous</a>
+      {% endif %}
+      <span class="pagination-text">Page {{ top_customers.number }} of {{ top_customers.paginator.num_pages }}</span>
+      {% if top_customers.has_next %}
+        <a class="btn btn-outline" href="?{% if top_customers_querystring %}{{ top_customers_querystring }}&{% endif %}top_customers_page={{ top_customers.next_page_number }}">Next</a>
+      {% endif %}
+    </div>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h3>Recent Transactions</h3>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Customer</th>
+          <th>Type</th>
+          <th>Points</th>
+          <th>Balance After</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for txn in recent_transactions %}
+          <tr>
+            <td>{{ txn.created_at|date:"d-m-Y H:i" }}</td>
+            <td>{{ txn.customer.full_name }}</td>
+            <td>{{ txn.get_transaction_type_display }}</td>
+            <td>{{ txn.points }}</td>
+            <td>{{ txn.balance_after }}</td>
+            <td>{{ txn.description|truncatechars:50 }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6">No transactions yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if recent_transactions.has_other_pages %}
+    <div class="pagination">
+      {% if recent_transactions.has_previous %}
+        <a class="btn btn-outline" href="?{% if transactions_querystring %}{{ transactions_querystring }}&{% endif %}transactions_page={{ recent_transactions.previous_page_number }}">Previous</a>
+      {% endif %}
+      <span class="pagination-text">Page {{ recent_transactions.number }} of {{ recent_transactions.paginator.num_pages }}</span>
+      {% if recent_transactions.has_next %}
+        <a class="btn btn-outline" href="?{% if transactions_querystring %}{{ transactions_querystring }}&{% endif %}transactions_page={{ recent_transactions.next_page_number }}">Next</a>
+      {% endif %}
+    </div>
+  {% endif %}
+</section>
+
+<style>
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+.stat-card {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 1rem;
+  text-align: center;
+}
+.stat-label {
+  display: block;
+  font-size: 0.85rem;
+  color: #64748b;
+}
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+</style>
+{% endblock %}

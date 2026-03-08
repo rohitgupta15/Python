@@ -1,0 +1,409 @@
+{% extends "salon/base.html" %}
+
+{% block title %}Workers - {{ salon.name }}{% endblock %}
+
+{% block content %}
+<section class="row-head">
+  <h2>Workers & Salary - {{ salon.name }}</h2>
+  <div class="action-row">
+    <a class="btn btn-outline" href="{% url 'salon_incentive_campaigns' salon.slug %}">Manage Incentive Campaigns</a>
+  </div>
+</section>
+{% include "salon/includes/owner_portal_nav.html" with active_tab="workers" %}
+
+<section class="panel">
+  <form method="get" class="filter-row">
+    <label for="month"><strong>Salary Month:</strong></label>
+    <input type="month" id="month" name="month" value="{{ selected_month }}" />
+    <select name="snapshot">
+      <option value="daily" {% if snapshot == "daily" %}selected{% endif %}>Daily Snapshot</option>
+      <option value="weekly" {% if snapshot == "weekly" %}selected{% endif %}>Weekly Snapshot</option>
+    </select>
+    <input type="text" name="worker_q" placeholder="Search worker details" value="{{ worker_search }}" />
+    <select name="worker_mode">
+      <option value="">All modes</option>
+      <option value="fixed" {% if worker_mode == "fixed" %}selected{% endif %}>Fixed Salary</option>
+      <option value="commission" {% if worker_mode == "commission" %}selected{% endif %}>Commission</option>
+    </select>
+    <select name="worker_access">
+      <option value="">All access</option>
+      <option value="enabled" {% if worker_access == "enabled" %}selected{% endif %}>Portal Enabled</option>
+      <option value="disabled" {% if worker_access == "disabled" %}selected{% endif %}>Portal Disabled</option>
+    </select>
+    <label for="page_size"><strong>Rows:</strong></label>
+    <select id="page_size" name="page_size">
+      {% for size in page_size_options %}
+        <option value="{{ size }}" {% if size == page_size %}selected{% endif %}>{{ size }}</option>
+      {% endfor %}
+    </select>
+    <button class="btn btn-outline" type="submit">Apply</button>
+    <a class="btn btn-outline" href="{% url 'salon_workers' salon.slug %}?month={{ selected_month }}&snapshot={{ snapshot }}&page_size={{ page_size }}">Clear</a>
+  </form>
+</section>
+
+<section class="panel">
+  <h3>Revenue Snapshot ({{ snapshot|title }})</h3>
+  <p class="hint">{{ snapshot_start }} to {{ snapshot_end }}</p>
+  <div class="card-grid report-grid">
+    <article class="card">
+      <h3>Total Visits</h3>
+      <p class="report-value">{{ summary_totals.total_visits }}</p>
+    </article>
+    <article class="card">
+      <h3>Total Customers Entertained</h3>
+      <p class="report-value">{{ summary_totals.total_customers }}</p>
+    </article>
+    <article class="card">
+      <h3>Total Revenue</h3>
+      <p class="report-value">Rs {{ summary_totals.total_revenue|floatformat:2 }}</p>
+    </article>
+  </div>
+  <div class="table-wrap" style="margin-top: 12px;">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Worker</th>
+          <th>Visits</th>
+          <th>Customers</th>
+          <th>Revenue</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in worker_snapshot %}
+          <tr>
+            <td>{{ item.assigned_worker__full_name }}</td>
+            <td>{{ item.visit_count }}</td>
+            <td>{{ item.customer_count }}</td>
+            <td>Rs {{ item.total_revenue|default:0|floatformat:2 }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="4">No worker activity in selected snapshot range.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="edit-grid">
+  <div class="panel">
+    <h3>Add Worker</h3>
+    <p class="hint">KYC document images (PAN/Aadhaar files) can be uploaded or updated only by admin.</p>
+    <form method="post" class="form-card">
+      {% csrf_token %}
+      <input type="hidden" name="form_type" value="add_worker" />
+      {{ worker_form.as_p }}
+      <button class="btn" type="submit">Save Worker</button>
+    </form>
+  </div>
+
+  <div class="panel">
+    <h3>Add Salary Payment Entry</h3>
+    <form method="post" class="form-card">
+      {% csrf_token %}
+      <input type="hidden" name="form_type" value="add_salary_payment" />
+      {{ salary_form.as_p }}
+      <button class="btn" type="submit">Add Salary Payment</button>
+    </form>
+  </div>
+</section>
+
+<section class="panel">
+  <h3>Worker Summary ({{ selected_month }})</h3>
+  {% if active_incentive_campaigns %}
+    <p class="hint">
+      Active incentive campaigns:
+      {% for campaign in active_incentive_campaigns %}
+        {{ campaign.title }} ({{ campaign.bonus_percent }}%){% if not forloop.last %}, {% endif %}
+      {% endfor %}
+    </p>
+  {% else %}
+    <p class="hint">No active incentive campaign for this salary month.</p>
+  {% endif %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Worker</th>
+          <th>Mode</th>
+          <th>Commission %</th>
+          <th>Monthly Fixed</th>
+          <th>Customer Dealing Sales</th>
+          <th>Base Due</th>
+          <th>Incentive Bonus</th>
+          <th>Total Worker Due</th>
+          <th>Owner Share</th>
+          <th>Paid</th>
+          <th>Balance</th>
+          <th>Portal Access</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in worker_cards %}
+          <tr>
+            <td>
+              <div class="worker-name-cell">
+                <strong>{{ row.worker.full_name }}</strong><br />
+                <small>{{ row.worker.role|default:"-" }}</small>
+                <div class="worker-hover-card">
+                  <h4>{{ row.worker.full_name }}</h4>
+                  <p><strong>Role:</strong> {{ row.worker.role|default:"-" }}</p>
+                  <p><strong>Phone:</strong> {{ row.worker.phone|default:"-" }}</p>
+                  <p><strong>Portal User:</strong> {{ row.worker.user.username|default:"-" }}</p>
+                  <p><strong>Joined:</strong> {{ row.worker.joined_on|default:"-" }}</p>
+                  <p><strong>Saved On:</strong> {{ row.worker.created_at }}</p>
+                  <hr />
+                  <p><strong>PAN:</strong> {{ row.worker.pan_number|default:"-" }}</p>
+                  <p><strong>Aadhaar:</strong> {{ row.worker.aadhaar_number|default:"-" }}</p>
+                  <p>
+                    <strong>Address:</strong>
+                    {{ row.worker.address_line1|default:"-" }}
+                    {% if row.worker.address_line2 %}, {{ row.worker.address_line2 }}{% endif %}
+                    {% if row.worker.city or row.worker.state or row.worker.pincode %}
+                      ({{ row.worker.city|default:"-" }}, {{ row.worker.state|default:"-" }} - {{ row.worker.pincode|default:"-" }})
+                    {% endif %}
+                  </p>
+                </div>
+              </div>
+            </td>
+            <td>{{ row.worker.get_payment_mode_display }}</td>
+            <td>{{ row.worker.commission_percent }}%</td>
+            <td>Rs {{ row.worker.fixed_monthly_salary|floatformat:2 }}</td>
+            <td>Rs {{ row.visit_sales|floatformat:2 }}</td>
+            <td>Rs {{ row.base_due_amount|floatformat:2 }}</td>
+            <td>Rs {{ row.incentive_amount|floatformat:2 }}</td>
+            <td>Rs {{ row.due_amount|floatformat:2 }}</td>
+            <td>Rs {{ row.owner_share|floatformat:2 }}</td>
+            <td>Rs {{ row.paid_amount|floatformat:2 }}</td>
+            <td>Rs {{ row.balance_due|floatformat:2 }}</td>
+            <td>
+              <div>
+                <small>Status: {% if row.worker.can_login %}Enabled{% else %}Disabled{% endif %}</small><br />
+                <small>User: {{ row.worker.user.username|default:"-" }}</small>
+              </div>
+              <form method="post" class="form-card" style="margin-top: 6px;">
+                {% csrf_token %}
+                <input type="hidden" name="form_type" value="grant_worker_access" />
+                <input type="hidden" name="worker_id" value="{{ row.worker.id }}" />
+                <input type="text" name="username" placeholder="Username" value="{{ row.worker.user.username|default:'' }}" required />
+                <input type="password" name="password" placeholder="Password (required first time)" />
+                <button class="btn btn-outline" type="submit">Enable/Update</button>
+              </form>
+              {% if row.worker.can_login %}
+                <form method="post" style="margin-top: 6px;">
+                  {% csrf_token %}
+                  <input type="hidden" name="form_type" value="disable_worker_access" />
+                  <input type="hidden" name="worker_id" value="{{ row.worker.id }}" />
+                  <button class="btn btn-outline" type="submit">Disable</button>
+                </form>
+              {% endif %}
+            </td>
+            <td>
+              <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="form_type" value="delete_worker" />
+                <input type="hidden" name="worker_id" value="{{ row.worker.id }}" />
+                <button class="btn btn-danger" type="submit">Delete</button>
+              </form>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="13">No workers added yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if worker_cards.has_other_pages %}
+    <div class="pagination">
+      {% if worker_cards.has_previous %}
+        <a class="btn btn-outline" href="?{% if worker_list_querystring %}{{ worker_list_querystring }}&{% endif %}worker_page={{ worker_cards.previous_page_number }}">Previous</a>
+      {% endif %}
+      <span class="pagination-text">Page {{ worker_cards.number }} of {{ worker_cards.paginator.num_pages }}</span>
+      {% if worker_cards.has_next %}
+        <a class="btn btn-outline" href="?{% if worker_list_querystring %}{{ worker_list_querystring }}&{% endif %}worker_page={{ worker_cards.next_page_number }}">Next</a>
+      {% endif %}
+    </div>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h3>Employee Progress Report (Month-on-Month)</h3>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Month</th>
+          <th>Worker</th>
+          <th>Visits</th>
+          <th>Customers</th>
+          <th>Revenue</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in monthly_progress %}
+          <tr>
+            <td>{{ item.month|date:"M Y" }}</td>
+            <td>{{ item.assigned_worker__full_name }}</td>
+            <td>{{ item.visit_count }}</td>
+            <td>{{ item.customer_count }}</td>
+            <td>Rs {{ item.total_revenue|default:0|floatformat:2 }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5">No month-on-month data yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if monthly_progress.has_other_pages %}
+    <div class="pagination">
+      {% if monthly_progress.has_previous %}
+        <a class="btn btn-outline" href="?{% if progress_querystring %}{{ progress_querystring }}&{% endif %}progress_page={{ monthly_progress.previous_page_number }}">Previous</a>
+      {% endif %}
+      <span class="pagination-text">Page {{ monthly_progress.number }} of {{ monthly_progress.paginator.num_pages }}</span>
+      {% if monthly_progress.has_next %}
+        <a class="btn btn-outline" href="?{% if progress_querystring %}{{ progress_querystring }}&{% endif %}progress_page={{ monthly_progress.next_page_number }}">Next</a>
+      {% endif %}
+    </div>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h3>Salary Payments ({{ selected_month }})</h3>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Paid On</th>
+          <th>Worker</th>
+          <th>Period</th>
+          <th>Amount</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in salary_payments %}
+          <tr>
+            <td>{{ item.paid_on }}</td>
+            <td>{{ item.worker.full_name }}</td>
+            <td>{{ item.period_month }}/{{ item.period_year }}</td>
+            <td>Rs {{ item.amount_paid|floatformat:2 }}</td>
+            <td>{{ item.notes|default:"-" }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5">No salary payments for selected month.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if salary_payments.has_other_pages %}
+    <div class="pagination">
+      {% if salary_payments.has_previous %}
+        <a class="btn btn-outline" href="?{% if salary_querystring %}{{ salary_querystring }}&{% endif %}salary_page={{ salary_payments.previous_page_number }}">Previous</a>
+      {% endif %}
+      <span class="pagination-text">Page {{ salary_payments.number }} of {{ salary_payments.paginator.num_pages }}</span>
+      {% if salary_payments.has_next %}
+        <a class="btn btn-outline" href="?{% if salary_querystring %}{{ salary_querystring }}&{% endif %}salary_page={{ salary_payments.next_page_number }}">Next</a>
+      {% endif %}
+    </div>
+  {% endif %}
+</section>
+
+<style>
+  .worker-name-cell {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+  }
+  .worker-hover-card {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    width: 340px;
+    max-width: 70vw;
+    background: linear-gradient(180deg, #fffaf5 0%, #ffffff 100%);
+    border: 1px solid #fed7aa;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.18);
+    border-radius: 12px;
+    padding: 0.8rem 0.9rem;
+    z-index: 50;
+    opacity: 0;
+    transform: translateY(-8px);
+    pointer-events: none;
+    transition: opacity 0.16s ease, transform 0.16s ease;
+  }
+  .worker-name-cell:hover .worker-hover-card {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+  .worker-hover-card h4 {
+    margin: 0 0 0.45rem;
+    color: #9a3412;
+  }
+  .worker-hover-card p {
+    margin: 0.2rem 0;
+    font-size: 0.85rem;
+    color: #334155;
+    line-height: 1.35;
+  }
+  .worker-hover-card hr {
+    border: 0;
+    border-top: 1px dashed #fdba74;
+    margin: 0.45rem 0;
+  }
+  .data-table tbody tr:hover {
+    background: #fff7ed;
+  }
+</style>
+
+<script>
+  (function () {
+    const popupErrors = [];
+    document.querySelectorAll(".messages .message.error").forEach((el) => {
+      const text = (el.textContent || "").trim();
+      if (text) popupErrors.push(text);
+    });
+    {% if worker_form.non_field_errors %}
+      {% for err in worker_form.non_field_errors %}
+        popupErrors.push("{{ err|escapejs }}");
+      {% endfor %}
+    {% endif %}
+    {% for field in worker_form %}
+      {% for err in field.errors %}
+        popupErrors.push("{{ field.label|escapejs }}: {{ err|escapejs }}");
+      {% endfor %}
+    {% endfor %}
+    {% for field in salary_form %}
+      {% for err in field.errors %}
+        popupErrors.push("{{ field.label|escapejs }}: {{ err|escapejs }}");
+      {% endfor %}
+    {% endfor %}
+    if (popupErrors.length) {
+      const unique = [...new Set(popupErrors)];
+      alert("Please fix the following:\n\n" + unique.join("\n"));
+    }
+
+    const modeField = document.getElementById("id_payment_mode");
+    const fixedField = document.getElementById("id_fixed_monthly_salary");
+    const commissionField = document.getElementById("id_commission_percent");
+    if (!modeField || !fixedField || !commissionField) return;
+
+    function syncPaymentFields() {
+      const mode = modeField.value;
+      if (mode === "commission") {
+        fixedField.disabled = true;
+        commissionField.disabled = false;
+      } else if (mode === "fixed") {
+        fixedField.disabled = false;
+        commissionField.disabled = true;
+      } else {
+        fixedField.disabled = false;
+        commissionField.disabled = false;
+      }
+    }
+
+    modeField.addEventListener("change", syncPaymentFields);
+    syncPaymentFields();
+  })();
+</script>
+{% endblock %}

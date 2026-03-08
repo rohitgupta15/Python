@@ -1,0 +1,44 @@
+<aside class="worker-side-nav" id="worker-side-nav" style="--worker-nav-color: {{ worker.nav_color|default:'#1d4ed8' }}; --worker-nav-bg: {{ worker.nav_background_color|default:'#0f172a' }}; --worker-nav-text: {{ worker.nav_text_color|default:'#eff6ff' }};">
+  <div class="worker-side-brand">Worker Hub</div>
+  <p class="worker-side-meta">{{ worker.full_name }} | {{ salon.name }}</p>
+  <form method="post" action="{% url 'worker_nav_color_update' %}" class="worker-color-form">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.get_full_path }}" />
+    <label for="worker-nav-color">Menu Colors</label>
+    <div class="worker-color-row">
+      <input id="worker-nav-color" type="color" name="nav_color" value="{{ worker.nav_color|default:'#1d4ed8' }}" />
+      <input id="worker-nav-bg" type="color" name="nav_background_color" value="{{ worker.nav_background_color|default:'#0f172a' }}" />
+      <input id="worker-nav-text" type="color" name="nav_text_color" value="{{ worker.nav_text_color|default:'#eff6ff' }}" />
+      <button class="btn btn-outline" type="submit">Apply</button>
+    </div>
+  </form>
+  <div class="worker-side-search">
+    <input type="search" id="worker-menu-search" placeholder="Search menu" />
+  </div>
+  <nav class="worker-side-links" id="worker-side-links">
+    <a class="{% if active_tab == 'dashboard' %}active{% endif %}" href="{% url 'worker_dashboard' %}">Dashboard</a>
+    <a class="{% if active_tab == 'salary_slips' %}active{% endif %}" href="{% url 'worker_salary_slips' %}">Salary Slips</a>
+    <a class="{% if active_tab == 'customers' %}active{% endif %}" href="{% url 'worker_customers' %}">Customers</a>
+    <a class="{% if active_tab == 'visits' %}active{% endif %}" href="{% url 'worker_visit_entry' %}">Visit Entry</a>
+    <a class="{% if active_tab == 'todos' %}active{% endif %}" href="{% url 'task_todos' %}">To-Do</a>
+    <a class="{% if active_tab == 'notes' %}active{% endif %}" href="{% url 'task_notes' %}">Notes</a>
+    <a class="{% if active_tab == 'reminders' %}active{% endif %}" href="{% url 'task_reminders' %}">Reminders</a>
+    <a class="{% if active_tab == 'style_ai' %}active{% endif %}" href="{% url 'worker_style_advisor' %}">AI Style Advisor</a>
+  </nav>
+</aside>
+<script>
+  (function () {
+    document.body.classList.add("has-worker-side-nav");
+    const searchInput = document.getElementById("worker-menu-search");
+    const nav = document.getElementById("worker-side-links");
+    if (!searchInput || !nav) return;
+    const links = Array.from(nav.querySelectorAll("a"));
+    searchInput.addEventListener("input", function () {
+      const term = (searchInput.value || "").trim().toLowerCase();
+      links.forEach(function (link) {
+        const show = !term || link.textContent.toLowerCase().indexOf(term) >= 0;
+        link.style.display = show ? "" : "none";
+      });
+    });
+  })();
+</script>

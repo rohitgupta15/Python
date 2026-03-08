@@ -1,0 +1,181 @@
+{% extends "salon/base.html" %}
+
+{% block title %}Loyalty Settings - {{ salon.name }}{% endblock %}
+
+{% block content %}
+<section class="row-head">
+  <h2>⚙️ Loyalty Program Settings</h2>
+  <div class="action-row">
+    <a class="btn btn-outline" href="{% url 'salon_loyalty' salon.slug %}">← Back to Loyalty</a>
+  </div>
+</section>
+{% include "salon/includes/owner_portal_nav.html" with active_tab="loyalty" %}
+
+<section class="panel">
+  <form method="post" class="form">
+    {% csrf_token %}
+    
+    <div class="form-group">
+      <label class="checkbox-label">
+        <input type="checkbox" name="is_active" {% if loyalty_settings.is_active %}checked{% endif %}>
+        <span>Enable Loyalty Program</span>
+      </label>
+      <p class="help-text">When enabled, customers will earn points on every purchase.</p>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="points_per_rupee">Points Earned per ₹1 Spent</label>
+        <input type="number" id="points_per_rupee" name="points_per_rupee" 
+               value="{{ loyalty_settings.points_per_rupee }}" step="0.1" min="0" required>
+        <p class="help-text">Example: 1 point per ₹1 spent</p>
+      </div>
+      
+      <div class="form-group">
+        <label for="points_redeem_value">Redemption Value (per point)</label>
+        <input type="number" id="points_redeem_value" name="points_redeem_value" 
+               value="{{ loyalty_settings.points_redeem_value }}" step="0.01" min="0" required>
+        <p class="help-text">Example: ₹0.25 discount per point redeemed</p>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="min_points_to_redeem">Minimum Points to Redeem</label>
+      <input type="number" id="min_points_to_redeem" name="min_points_to_redeem" 
+             value="{{ loyalty_settings.min_points_to_redeem }}" min="1" required>
+      <p class="help-text">Customers must have at least this many points to redeem them for discounts.</p>
+    </div>
+
+    <div class="form-group">
+      <label class="checkbox-label">
+        <input type="checkbox" name="enable_membership_tiers" {% if loyalty_settings.enable_membership_tiers %}checked{% endif %}>
+        <span>Enable Membership Tiers</span>
+      </label>
+      <p class="help-text">Automatic tier upgrades based on lifetime points.</p>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="silver_tier_min_points">Silver Tier Min Points</label>
+        <input type="number" id="silver_tier_min_points" name="silver_tier_min_points" value="{{ loyalty_settings.silver_tier_min_points }}" min="1" required>
+      </div>
+      <div class="form-group">
+        <label for="gold_tier_min_points">Gold Tier Min Points</label>
+        <input type="number" id="gold_tier_min_points" name="gold_tier_min_points" value="{{ loyalty_settings.gold_tier_min_points }}" min="1" required>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="platinum_tier_min_points">Platinum Tier Min Points</label>
+        <input type="number" id="platinum_tier_min_points" name="platinum_tier_min_points" value="{{ loyalty_settings.platinum_tier_min_points }}" min="1" required>
+      </div>
+      <div class="form-group">
+        <label for="referral_bonus_points">Referral Bonus Points</label>
+        <input type="number" id="referral_bonus_points" name="referral_bonus_points" value="{{ loyalty_settings.referral_bonus_points }}" min="0" required>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="birthday_coupon_discount_percent">Birthday Coupon Discount %</label>
+        <input type="number" id="birthday_coupon_discount_percent" name="birthday_coupon_discount_percent" value="{{ loyalty_settings.birthday_coupon_discount_percent }}" min="1" max="100" required>
+      </div>
+      <div class="form-group">
+        <label for="birthday_coupon_valid_days">Birthday Coupon Valid Days</label>
+        <input type="number" id="birthday_coupon_valid_days" name="birthday_coupon_valid_days" value="{{ loyalty_settings.birthday_coupon_valid_days }}" min="1" required>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Save Settings</button>
+    </div>
+  </form>
+</section>
+
+<section class="panel">
+  <h3>📖 How It Works</h3>
+  <div class="info-box">
+    <h4>Earning Points</h4>
+    <p>Customers earn loyalty points automatically when they make a purchase. The points are calculated based on the total bill amount.</p>
+    
+    <h4>Redeeming Points</h4>
+    <p>During checkout, customers can redeem their accumulated points for a discount on their bill. The discount value is calculated by multiplying points by the redemption value.</p>
+    
+    <h4>Example</h4>
+    <ul>
+      <li>Customer spends ₹500</li>
+      <li>With 1 point per ₹1 = 500 points earned</li>
+      <li>Next visit, customer redeems 500 points</li>
+      <li>Discount = 500 × ₹0.25 = ₹125 discount!</li>
+    </ul>
+  </div>
+</section>
+
+<style>
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+.form-group {
+  margin-bottom: 1.5rem;
+}
+.form-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+.form-group input[type="number"],
+.form-group input[type="text"] {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+.checkbox-label input {
+  width: auto;
+  height: auto;
+}
+.help-text {
+  font-size: 0.875rem;
+  color: #6c757d;
+  margin-top: 0.25rem;
+}
+.form-actions {
+  margin-top: 1.5rem;
+}
+.btn-primary {
+  background: #d97706;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.btn-primary:hover {
+  background: #b45309;
+}
+.info-box {
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 8px;
+}
+.info-box h4 {
+  margin: 1rem 0 0.5rem;
+}
+.info-box h4:first-child {
+  margin-top: 0;
+}
+.info-box ul {
+  margin-left: 1.5rem;
+}
+</style>
+{% endblock %}

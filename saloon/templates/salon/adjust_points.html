@@ -1,0 +1,37 @@
+{% extends "salon/base.html" %}
+
+{% block title %}Adjust Points - {{ customer.full_name }}{% endblock %}
+
+{% block content %}
+<section class="row-head">
+  <h2>Adjust Loyalty Points</h2>
+  <div class="action-row">
+    <a class="btn btn-outline" href="{% url 'customer_loyalty_detail' salon.slug customer.id %}">Back to Customer Detail</a>
+  </div>
+</section>
+{% include "salon/includes/owner_portal_nav.html" with active_tab="loyalty" salon=salon %}
+
+<section class="panel">
+  <h3>{{ customer.full_name }} (Current: {{ customer.loyalty_points }} points)</h3>
+  <form method="post" class="form-card" style="max-width: 560px;">
+    {% csrf_token %}
+    <p>
+      <label for="transaction_type">Transaction Type</label>
+      <select id="transaction_type" name="transaction_type">
+        <option value="earned">Points Earned</option>
+        <option value="redeemed">Points Redeemed</option>
+        <option value="adjusted">Manual Adjustment</option>
+      </select>
+    </p>
+    <p>
+      <label for="points">Points</label>
+      <input id="points" name="points" type="number" min="1" required />
+    </p>
+    <p>
+      <label for="description">Description</label>
+      <textarea id="description" name="description" rows="3" placeholder="Reason for adjustment"></textarea>
+    </p>
+    <button class="btn" type="submit">Save Adjustment</button>
+  </form>
+</section>
+{% endblock %}

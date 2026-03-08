@@ -1,0 +1,19 @@
+<html>
+    <!--<title>data page </title>-->
+    <title>{{title}}</title>
+<body>
+    <p>Hello Data page </p>
+    <p>outside for loop {{bdata}} {{clist}}</p>
+    {%for n in clist%}
+    {{forloop.counter}}
+    <p>{{bdata}} {{clist}}</p>
+    {%endfor%}
+
+    <div>
+       <tr> {%for a in student%}
+        <td>{{a.name}}</td>
+        <td>{{a.phone}}</td>    
+        {%endfor%}<tr>
+    </div>
+</body>
+</html>

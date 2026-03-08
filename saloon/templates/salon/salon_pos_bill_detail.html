@@ -1,0 +1,168 @@
+{% extends "salon/base.html" %}
+
+{% block title %}Invoice {{ bill.bill_number }}{% endblock %}
+
+{% block content %}
+<section class="row-head">
+  <h2>Invoice: {{ bill.bill_number }}</h2>
+  <div class="action-row">
+    <a class="btn btn-outline" href="{% url 'salon_pos' salon.slug %}">← Back to POS</a>
+    <a class="btn btn-outline" href="{% url 'view_receipt_online' salon.slug bill.id %}" target="_blank">👁️ View Receipt</a>
+    <button class="btn" onclick="window.print()">🖨️ Print</button>
+  </div>
+</section>
+{% include "salon/includes/owner_portal_nav.html" with active_tab="pos" %}
+
+<section class="panel">
+  <h3>📧 Send Digital Receipt</h3>
+  <div class="receipt-actions">
+    {% if bill.customer %}
+      {% if bill.customer.phone or bill.customer.whatsapp_number %}
+        <a class="btn btn-whatsapp" href="{% url 'send_receipt_whatsapp' salon.slug bill.id %}" target="_blank">
+          📱 Send via WhatsApp
+        </a>
+      {% endif %}
+      {% if bill.customer.email %}
+        <a class="btn btn-email" href="{% url 'send_receipt_email' salon.slug bill.id %}">
+          📧 Send via Email
+        </a>
+      {% endif %}
+    {% endif %}
+    <a class="btn btn-outline" href="{% url 'download_receipt_pdf' salon.slug bill.id %}" target="_blank">
+      📄 Download PDF
+    </a>
+    {% if bill.receipt_sent %}
+      <span class="receipt-sent-badge">
+        ✅ Receipt sent via {{ bill.get_receipt_sent_via_display }} on {{ bill.receipt_sent_at|date:"d-m-Y H:i" }}
+      </span>
+    {% endif %}
+  </div>
+</section>
+
+<section class="panel invoice-card">
+  <h3>{{ salon.name }}</h3>
+  <p>{{ salon.address }}</p>
+  <p>Phone: {{ salon.phone }} | Email: {{ salon.email }}</p>
+  <hr />
+  <p><strong>Bill Date:</strong> {{ bill.bill_date }}</p>
+  <p><strong>Customer:</strong> {{ bill.customer.full_name|default:"Walk-in Customer" }}</p>
+  {% if bill.customer %}
+    <p><strong>Mobile:</strong> {{ bill.customer.phone }}</p>
+    {% if bill.customer.loyalty_points > 0 %}
+      <p><strong>🎁 Loyalty Points:</strong> {{ bill.customer.loyalty_points }} points available</p>
+    {% endif %}
+  {% endif %}
+
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th>Qty</th>
+          <th>Rate</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+          <tr>
+            <td>{{ item.item_name }}</td>
+            <td>{{ item.quantity }}</td>
+            <td>Rs {{ item.unit_price|floatformat:2 }}</td>
+            <td>Rs {{ item.line_total|floatformat:2 }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="invoice-summary">
+    <p>Subtotal: Rs {{ bill.subtotal|floatformat:2 }}</p>
+    <p>Discount: Rs {{ bill.discount_amount|floatformat:2 }}</p>
+    <p>Tax ({{ bill.tax_percent }}%): Rs {{ bill.tax_amount|floatformat:2 }}</p>
+    {% if bill.points_discount > 0 %}
+      <p class="points-discount">Points Discount: Rs {{ bill.points_discount|floatformat:2 }}</p>
+    {% endif %}
+    <p><strong>Grand Total: Rs {{ bill.total_amount|floatformat:2 }}</strong></p>
+    <p>Received: Rs {{ bill.amount_received|floatformat:2 }}</p>
+    <p>Balance: Rs {{ bill.balance_due|floatformat:2 }}</p>
+    <p>Status: {{ bill.get_payment_status_display }}</p>
+    <p>Payment Method: {{ bill.get_payment_method_display }}</p>
+  </div>
+
+  {% if bill.points_earned > 0 or bill.points_redeemed > 0 %}
+  <div class="loyalty-summary">
+    <h4>🎁 Loyalty Points Summary</h4>
+    {% if bill.points_earned > 0 %}
+      <p>Points Earned: +{{ bill.points_earned }}</p>
+    {% endif %}
+    {% if bill.points_redeemed > 0 %}
+      <p>Points Redeemed: -{{ bill.points_redeemed }}</p>
+      <p>Discount from Points: Rs {{ bill.points_discount|floatformat:2 }}</p>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if payment_qr %}
+    <div class="payment-qr-box">
+      <h4>Scan & Pay (UPI)</h4>
+      <p>Customer can scan this QR to pay Rs {{ payment_qr.amount|floatformat:2 }} directly.</p>
+      <img src="{{ payment_qr.qr_url }}" alt="UPI payment QR for bill {{ bill.bill_number }}" />
+      <p class="hint">UPI ID: {{ salon.upi_id }} | Payee: {{ payment_qr.payee_name }}</p>
+      <p><a class="btn btn-outline" href="{{ payment_qr.upi_url }}">Open UPI Payment Link</a></p>
+    </div>
+  {% else %}
+    <p class="hint">Add salon UPI ID in Manage Salon details to enable payment QR on invoices.</p>
+  {% endif %}
+</section>
+
+<style>
+.receipt-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.receipt-sent-badge {
+  background: #d4edda;
+  color: #155724;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+}
+.btn-whatsapp { background: #25D366; color: white; }
+.btn-email { background: #EA4335; color: white; }
+.loyalty-summary {
+  background: #fff3cd;
+  padding: 1rem;
+  border-radius: 8px;
+  margin: 1rem 0;
+}
+.points-discount {
+  color: #856404;
+  font-weight: 600;
+}
+.loyalty-form {
+  margin-top: 1rem;
+}
+.form-row {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-end;
+}
+.form-group {
+  flex: 1;
+}
+.form-group input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+.help-text {
+  font-size: 0.875rem;
+  color: #6c757d;
+  margin-top: 0.25rem;
+}
+</style>
+{% endblock %}

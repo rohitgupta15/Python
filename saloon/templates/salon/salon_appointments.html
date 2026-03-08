@@ -1,0 +1,125 @@
+{% extends "salon/base.html" %}
+
+{% block title %}Appointments - {{ salon.name }}{% endblock %}
+
+{% block content %}
+<section class="row-head">
+  <h2>Appointments - {{ salon.name }}</h2>
+</section>
+{% include "salon/includes/owner_portal_nav.html" with active_tab="appointments" %}
+
+<section class="edit-grid">
+  <div class="panel">
+    <h3>Pre-Book Appointment (Phone Call)</h3>
+    <p class="hint">Select existing customer or enter new caller details.</p>
+    <form method="post" class="form-card">
+      {% csrf_token %}
+      <input type="hidden" name="form_type" value="add_appointment" />
+      {{ form.as_p }}
+      <button class="btn" type="submit">Save Appointment</button>
+    </form>
+  </div>
+
+	  <div class="panel">
+	    <h3>Upcoming Appointments</h3>
+	    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Date & Time</th>
+            <th>Customer</th>
+            <th>Phone</th>
+            <th>Service</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in upcoming %}
+            <tr>
+              <td>{{ item.appointment_at }}</td>
+              <td>{{ item.customer.full_name|default:item.customer_name }}</td>
+              <td>{{ item.customer.phone|default:item.customer_phone }}</td>
+              <td>{{ item.service.name|default:"-" }}</td>
+              <td>{{ item.get_status_display }}</td>
+              <td>
+                <form method="post" class="inline-form">
+                  {% csrf_token %}
+                  <input type="hidden" name="form_type" value="update_status" />
+                  <input type="hidden" name="appointment_id" value="{{ item.id }}" />
+                  <select name="status">
+                    {% for key, label in status_choices %}
+                      <option value="{{ key }}" {% if item.status == key %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                  </select>
+                  <button class="btn btn-outline" type="submit">Update</button>
+                </form>
+                <form method="post" class="inline-form">
+                  {% csrf_token %}
+                  <input type="hidden" name="form_type" value="delete_appointment" />
+                  <input type="hidden" name="appointment_id" value="{{ item.id }}" />
+                  <button class="btn btn-danger" type="submit">Delete</button>
+                </form>
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="6">No upcoming appointments.</td></tr>
+          {% endfor %}
+	        </tbody>
+	      </table>
+	    </div>
+	    {% if upcoming.has_other_pages %}
+	      <div class="pagination">
+	        {% if upcoming.has_previous %}
+	          <a class="btn btn-outline" href="?{% if upcoming_page_querystring %}{{ upcoming_page_querystring }}&{% endif %}upcoming_page={{ upcoming.previous_page_number }}">Previous</a>
+	        {% endif %}
+	        <span class="pagination-text">Page {{ upcoming.number }} of {{ upcoming.paginator.num_pages }}</span>
+	        {% if upcoming.has_next %}
+	          <a class="btn btn-outline" href="?{% if upcoming_page_querystring %}{{ upcoming_page_querystring }}&{% endif %}upcoming_page={{ upcoming.next_page_number }}">Next</a>
+	        {% endif %}
+	      </div>
+	    {% endif %}
+	  </div>
+</section>
+
+<section class="panel">
+  <h3>Past Appointments</h3>
+	  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Date & Time</th>
+          <th>Customer</th>
+          <th>Phone</th>
+          <th>Service</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in recent %}
+          <tr>
+            <td>{{ item.appointment_at }}</td>
+            <td>{{ item.customer.full_name|default:item.customer_name }}</td>
+            <td>{{ item.customer.phone|default:item.customer_phone }}</td>
+            <td>{{ item.service.name|default:"-" }}</td>
+            <td>{{ item.get_status_display }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5">No past appointments.</td></tr>
+        {% endfor %}
+      </tbody>
+	    </table>
+	  </div>
+	  {% if recent.has_other_pages %}
+	    <div class="pagination">
+	      {% if recent.has_previous %}
+	        <a class="btn btn-outline" href="?{% if past_page_querystring %}{{ past_page_querystring }}&{% endif %}past_page={{ recent.previous_page_number }}">Previous</a>
+	      {% endif %}
+	      <span class="pagination-text">Page {{ recent.number }} of {{ recent.paginator.num_pages }}</span>
+	      {% if recent.has_next %}
+	        <a class="btn btn-outline" href="?{% if past_page_querystring %}{{ past_page_querystring }}&{% endif %}past_page={{ recent.next_page_number }}">Next</a>
+	      {% endif %}
+	    </div>
+	  {% endif %}
+</section>
+{% endblock %}

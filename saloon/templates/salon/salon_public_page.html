@@ -1,0 +1,636 @@
+{% extends "salon/base.html" %}
+
+{% block title %}{{ salon.name }}{% endblock %}
+
+{% block content %}
+<div class="public-page customer-experience layout-{{ config.layout_style }} theme-{{ config.theme_preset }} font-{{ config.custom_font }}" style="--ce-primary: {{ config.primary_color }}; --ce-secondary: {{ config.secondary_color }}; --ce-accent: {{ config.accent_color }}; --site-bg-color: {{ config.website_bg_color }}; {% if config.website_wallpaper %}--site-bg-image: url('{{ config.website_wallpaper.url }}');{% endif %}">
+  <section class="ce-hero">
+    {% if salon.cover_image %}
+      <div class="ce-hero-media">
+        <img src="{{ salon.cover_image.url }}" alt="{{ salon.name }} cover" />
+      </div>
+    {% endif %}
+    <div class="ce-hero-content">
+      <p class="ce-kicker">Salon Care At Your Comfort</p>
+      <h1>{{ config.hero_title|default:salon.name }}</h1>
+      <p>{{ config.hero_subtitle|default:salon.tagline|default:"Professional beauty services delivered with premium hygiene and transparent pricing." }}</p>
+      <div class="ce-hero-cta">
+        {% if config.cta_link %}
+          <a class="btn" href="{{ config.cta_link }}" target="_blank" rel="noopener noreferrer">{{ config.cta_text }}</a>
+        {% else %}
+          <a class="btn" href="#ce-services">Explore Services</a>
+        {% endif %}
+        {% if salon.phone %}
+          <a class="btn btn-outline" href="https://wa.me/{{ salon.phone|cut:' '|cut:'+'|cut:'-'|cut:'('|cut:')' }}" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+        {% endif %}
+      </div>
+      <div class="ce-quick-stats">
+        <div><strong>{{ services|length }}+</strong><span>Services</span></div>
+        <div><strong>{{ features|length }}+</strong><span>Benefits</span></div>
+        <div><strong>{{ testimonials|length }}+</strong><span>Reviews</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="ce-section ce-contact">
+    <div><strong>Phone:</strong> {{ salon.phone|default:"Not provided" }}</div>
+    <div><strong>Hours:</strong> {{ salon.opening_hours|default:"Not provided" }}</div>
+    <div><strong>Address:</strong> {{ salon.address|default:"Not provided" }}</div>
+    {% if salon.location_map_url %}
+      <div>
+        <strong>Map:</strong>
+        <a href="{{ salon.location_map_url }}" target="_blank" rel="noopener noreferrer">Open in Maps</a>
+      </div>
+    {% elif salon.latitude is not None and salon.longitude is not None %}
+      <div>
+        <strong>Map:</strong>
+        <a href="https://www.google.com/maps?q={{ salon.latitude }},{{ salon.longitude }}" target="_blank" rel="noopener noreferrer">Open in Maps</a>
+      </div>
+    {% endif %}
+  </section>
+
+  {% if offers %}
+    <section class="ce-section">
+      <div class="ce-section-head">
+        <h2>Live Offers</h2>
+      </div>
+      <div class="ce-offers-grid">
+        {% for offer in offers %}
+          <article class="ce-offer-card">
+            <p class="ce-offer-badge">{{ offer.discount_percent }}% OFF</p>
+            <h3>{{ offer.title }}</h3>
+            <p>{{ offer.description|default:"Limited period offer." }}</p>
+            <small>Valid till {{ offer.valid_to }}</small>
+          </article>
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+
+  <section class="ce-section" id="ce-services">
+    <div class="ce-section-head">
+      <h2>Book Services</h2>
+      <input type="search" id="ce-service-search" placeholder="Search service, category..." />
+    </div>
+    <div class="ce-filter-chips" id="ce-filter-chips">
+      <button class="ce-chip active" type="button" data-cat="all">All</button>
+    </div>
+    <div class="ce-service-grid" id="ce-service-grid">
+      {% for service in services %}
+        <article class="ce-service-card" data-name="{{ service.name|lower }}" data-cat="{{ service.category|default:'general'|lower }}">
+          {% if service.image %}
+            <img src="{{ service.image.url }}" alt="{{ service.name }}" />
+          {% endif %}
+          <div class="ce-service-body">
+            <h3>{{ service.name }}</h3>
+            <p>{{ service.description|default:"Professional salon service with quality products." }}</p>
+            <div class="ce-service-meta">
+              <span>{{ service.category|default:"General" }}</span>
+              <span>{{ service.duration_minutes }} min</span>
+            </div>
+            <div class="ce-service-foot">
+              <strong>Rs {{ service.price|floatformat:2 }}</strong>
+              {% if salon.phone %}
+                <a class="btn btn-outline" href="https://wa.me/{{ salon.phone|cut:' '|cut:'+'|cut:'-'|cut:'('|cut:')' }}?text=Hi%2C%20I%20want%20to%20book%20{{ service.name|urlencode }}" target="_blank" rel="noopener noreferrer">Book</a>
+              {% endif %}
+            </div>
+          </div>
+        </article>
+      {% empty %}
+        <p>No services available currently.</p>
+      {% endfor %}
+    </div>
+  </section>
+
+  {% if features %}
+    <section class="ce-section">
+      <div class="ce-section-head">
+        <h2>Why Customers Choose Us</h2>
+      </div>
+      <div class="ce-feature-grid">
+        {% for feature in features %}
+          <article class="ce-feature-card">
+            {% with feature.gallery_images.all as gallery %}
+              {% if gallery|length > 1 %}
+                <div class="ce-feature-slider" data-slider="feature-{{ feature.id }}">
+                  {% for img in gallery %}
+                    {% if img.is_active %}
+                      <img src="{{ img.image.url }}" alt="{{ feature.title }}" class="ce-feature-slide {% if forloop.first %}active{% endif %}" />
+                    {% endif %}
+                  {% endfor %}
+                </div>
+              {% elif gallery|length == 1 %}
+                {% for img in gallery %}
+                  <img src="{{ img.image.url }}" alt="{{ feature.title }}" />
+                {% endfor %}
+              {% elif feature.image %}
+                <img src="{{ feature.image.url }}" alt="{{ feature.title }}" />
+              {% else %}
+                <div class="ce-feature-placeholder">{{ feature.title|slice:":1"|upper }}</div>
+              {% endif %}
+            {% endwith %}
+            <h3>{{ feature.title }}</h3>
+            <p>{{ feature.description }}</p>
+          </article>
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+
+  {% if gallery_items %}
+    <section class="ce-section">
+      <div class="ce-section-head">
+        <h2>Before & After</h2>
+        <div class="ce-gallery-nav">
+          <button type="button" id="ce-gallery-prev" class="btn btn-outline">Prev</button>
+          <button type="button" id="ce-gallery-next" class="btn btn-outline">Next</button>
+        </div>
+      </div>
+      <div class="ce-gallery-track" id="ce-gallery-track">
+        {% for item in gallery_items %}
+          <article class="ce-gallery-card">
+            <h3>{{ item.title|default:"Transformation" }}</h3>
+            <div class="ce-ba-grid">
+              <figure>
+                <img src="{{ item.before_image.url }}" alt="Before" />
+                <figcaption>Before</figcaption>
+              </figure>
+              <figure>
+                <img src="{{ item.after_image.url }}" alt="After" />
+                <figcaption>After</figcaption>
+              </figure>
+            </div>
+            {% if item.description %}<p>{{ item.description }}</p>{% endif %}
+          </article>
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+
+  {% if testimonials %}
+    <section class="ce-section">
+      <div class="ce-section-head">
+        <h2>What Clients Say</h2>
+      </div>
+      <div class="ce-testimonial-wrap">
+        {% for item in testimonials %}
+          <article class="ce-testimonial-card {% if forloop.first %}active{% endif %}">
+            <p class="ce-quote">"{{ item.text }}"</p>
+            <p><strong>{{ item.customer_name }}</strong> | {{ item.rating }}/5</p>
+          </article>
+        {% endfor %}
+      </div>
+      <div class="ce-dots" id="ce-testimonial-dots"></div>
+    </section>
+  {% endif %}
+
+  {% if sections %}
+    <section class="ce-section">
+      <div class="ce-section-head">
+        <h2>More About {{ salon.name }}</h2>
+      </div>
+      <div class="ce-highlights-grid">
+        {% for section in sections %}
+          <article class="ce-highlight-card">
+            <h3>{{ section.heading }}</h3>
+            <p>{{ section.body }}</p>
+          </article>
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+
+  <div class="ce-sticky-bar">
+    {% if salon.phone %}
+      <a class="btn btn-outline" href="tel:{{ salon.phone }}">Call</a>
+      <a class="btn" href="https://wa.me/{{ salon.phone|cut:' '|cut:'+'|cut:'-'|cut:'('|cut:')' }}" target="_blank" rel="noopener noreferrer">WhatsApp Booking</a>
+    {% else %}
+      <a class="btn" href="#ce-services">View Services</a>
+    {% endif %}
+  </div>
+</div>
+
+<style>
+.customer-experience {
+  --ce-text: #0f172a;
+  --ce-surface: #ffffff;
+  --ce-muted: #64748b;
+  color: var(--ce-text);
+  background-color: var(--site-bg-color, #f8fafc);
+  background-image: var(--site-bg-image, none);
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  border-radius: 20px;
+  padding: 12px;
+}
+.customer-experience .ce-section {
+  margin-top: 28px;
+  background: var(--ce-surface);
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow: 0 14px 32px rgba(2, 6, 23, 0.08);
+}
+.customer-experience .ce-section-head {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.customer-experience .ce-section h2 {
+  margin: 0;
+}
+.customer-experience .ce-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  background: linear-gradient(130deg, var(--ce-primary), var(--ce-secondary));
+  color: #fff;
+  padding: 28px;
+  display: grid;
+  gap: 20px;
+  grid-template-columns: 1.1fr 1fr;
+}
+.customer-experience .ce-hero-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 16px;
+  min-height: 260px;
+}
+.customer-experience .ce-kicker {
+  margin: 0 0 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 0.78rem;
+  opacity: 0.9;
+}
+.customer-experience .ce-hero h1 {
+  margin: 0 0 10px;
+  font-size: clamp(1.9rem, 3vw, 2.8rem);
+}
+.customer-experience .ce-hero p {
+  margin: 0;
+}
+.customer-experience .ce-hero-cta {
+  margin-top: 16px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.customer-experience .ce-quick-stats {
+  margin-top: 16px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.customer-experience .ce-quick-stats div {
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  border-radius: 12px;
+  padding: 8px 12px;
+  min-width: 100px;
+}
+.customer-experience .ce-quick-stats strong {
+  display: block;
+}
+.customer-experience .ce-contact {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.customer-experience .ce-contact div {
+  padding: 12px;
+  border: 1px dashed rgba(15, 23, 42, 0.2);
+  border-radius: 12px;
+}
+.customer-experience #ce-service-search {
+  max-width: 300px;
+  width: 100%;
+}
+.customer-experience .ce-filter-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.customer-experience .ce-chip {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #1e293b;
+  padding: 7px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.customer-experience .ce-chip.active {
+  border-color: var(--ce-accent);
+  background: color-mix(in srgb, var(--ce-accent) 16%, #fff);
+}
+.customer-experience .ce-service-grid,
+.customer-experience .ce-feature-grid,
+.customer-experience .ce-offers-grid,
+.customer-experience .ce-highlights-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+.customer-experience .ce-feature-grid {
+  align-items: start;
+}
+.customer-experience .ce-service-card,
+.customer-experience .ce-feature-card,
+.customer-experience .ce-offer-card,
+.customer-experience .ce-highlight-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #fff;
+}
+.customer-experience .ce-feature-card {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  transform-origin: center center;
+}
+.customer-experience .ce-feature-card:hover {
+  transform: scale(1.04);
+  box-shadow: 0 16px 28px rgba(15, 23, 42, 0.18);
+  z-index: 2;
+}
+.customer-experience .ce-service-card img,
+.customer-experience .ce-feature-card img {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+}
+.customer-experience .ce-feature-slider {
+  position: relative;
+  width: 100%;
+  height: 150px;
+  overflow: hidden;
+  border-radius: 10px;
+}
+.customer-experience .ce-feature-slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+.customer-experience .ce-feature-slide.active {
+  opacity: 1;
+}
+.customer-experience .ce-feature-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.customer-experience .ce-feature-placeholder {
+  width: 100%;
+  height: 150px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #0f172a;
+  background: linear-gradient(135deg, #fef3c7, #bfdbfe);
+}
+.customer-experience .ce-service-body,
+.customer-experience .ce-feature-card,
+.customer-experience .ce-offer-card,
+.customer-experience .ce-highlight-card {
+  padding: 12px;
+}
+.customer-experience .ce-service-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--ce-muted);
+  font-size: 0.86rem;
+}
+.customer-experience .ce-service-foot {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.customer-experience .ce-offer-badge {
+  display: inline-block;
+  margin: 0 0 8px;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #166534;
+  padding: 4px 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.customer-experience .ce-gallery-nav {
+  display: flex;
+  gap: 8px;
+}
+.customer-experience .ce-gallery-track {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  padding-bottom: 4px;
+}
+.customer-experience .ce-gallery-card {
+  min-width: min(92vw, 520px);
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 12px;
+  background: #fff;
+}
+.customer-experience .ce-ba-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.customer-experience .ce-ba-grid img {
+  width: 100%;
+  height: 170px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+.customer-experience .ce-ba-grid figure {
+  margin: 0;
+}
+.customer-experience .ce-ba-grid figcaption {
+  margin-top: 6px;
+  font-size: 0.82rem;
+  color: var(--ce-muted);
+}
+.customer-experience .ce-testimonial-wrap {
+  position: relative;
+  min-height: 140px;
+}
+.customer-experience .ce-testimonial-card {
+  display: none;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 14px;
+}
+.customer-experience .ce-testimonial-card.active {
+  display: block;
+}
+.customer-experience .ce-quote {
+  margin-top: 0;
+}
+.customer-experience .ce-dots {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.customer-experience .ce-dots button {
+  width: 8px;
+  height: 8px;
+  border: none;
+  border-radius: 50%;
+  background: #cbd5e1;
+  cursor: pointer;
+}
+.customer-experience .ce-dots button.active {
+  background: var(--ce-accent);
+}
+.customer-experience .ce-sticky-bar {
+  position: sticky;
+  bottom: 14px;
+  margin-top: 26px;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  z-index: 3;
+}
+@media (max-width: 960px) {
+  .customer-experience .ce-hero {
+    grid-template-columns: 1fr;
+  }
+  .customer-experience .ce-contact {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+<script>
+  (function () {
+    const serviceSearch = document.getElementById("ce-service-search");
+    const serviceGrid = document.getElementById("ce-service-grid");
+    const serviceCards = Array.from(document.querySelectorAll(".ce-service-card"));
+    const chipsWrap = document.getElementById("ce-filter-chips");
+    let activeCategory = "all";
+
+    function buildCategoryChips() {
+      if (!chipsWrap) return;
+      const categories = new Set();
+      serviceCards.forEach((card) => categories.add((card.dataset.cat || "general").trim()));
+      categories.forEach((category) => {
+        if (category === "all") return;
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "ce-chip";
+        btn.dataset.cat = category;
+        btn.textContent = category.charAt(0).toUpperCase() + category.slice(1);
+        chipsWrap.appendChild(btn);
+      });
+    }
+
+    function filterServices() {
+      const term = (serviceSearch?.value || "").trim().toLowerCase();
+      serviceCards.forEach((card) => {
+        const name = card.dataset.name || "";
+        const category = card.dataset.cat || "";
+        const matchCategory = activeCategory === "all" || category === activeCategory;
+        const matchText = !term || name.includes(term) || category.includes(term);
+        card.style.display = matchCategory && matchText ? "" : "none";
+      });
+    }
+
+    chipsWrap?.addEventListener("click", (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLButtonElement)) return;
+      activeCategory = target.dataset.cat || "all";
+      chipsWrap.querySelectorAll(".ce-chip").forEach((chip) => chip.classList.remove("active"));
+      target.classList.add("active");
+      filterServices();
+    });
+
+    serviceSearch?.addEventListener("input", filterServices);
+    buildCategoryChips();
+    filterServices();
+
+    const galleryTrack = document.getElementById("ce-gallery-track");
+    document.getElementById("ce-gallery-prev")?.addEventListener("click", () => {
+      galleryTrack?.scrollBy({ left: -420, behavior: "smooth" });
+    });
+    document.getElementById("ce-gallery-next")?.addEventListener("click", () => {
+      galleryTrack?.scrollBy({ left: 420, behavior: "smooth" });
+    });
+
+    const testimonials = Array.from(document.querySelectorAll(".ce-testimonial-card"));
+    const dotsWrap = document.getElementById("ce-testimonial-dots");
+    if (testimonials.length && dotsWrap) {
+      let index = 0;
+      testimonials.forEach((_, idx) => {
+        const dot = document.createElement("button");
+        dot.type = "button";
+        if (idx === 0) dot.classList.add("active");
+        dot.addEventListener("click", () => showTestimonial(idx));
+        dotsWrap.appendChild(dot);
+      });
+      const dots = Array.from(dotsWrap.querySelectorAll("button"));
+      function showTestimonial(next) {
+        index = next;
+        testimonials.forEach((item, idx) => item.classList.toggle("active", idx === index));
+        dots.forEach((item, idx) => item.classList.toggle("active", idx === index));
+      }
+      setInterval(() => showTestimonial((index + 1) % testimonials.length), 5000);
+    }
+
+    const sliders = Array.from(document.querySelectorAll(".ce-feature-slider"));
+    sliders.forEach((slider) => {
+      const slides = Array.from(slider.querySelectorAll(".ce-feature-slide"));
+      if (slides.length <= 1) return;
+      const card = slider.closest(".ce-feature-card");
+      let current = 0;
+      let timer = null;
+      const intervalMs = Math.max(400, Math.floor(5000 / slides.length));
+
+      function showSlide(nextIndex) {
+        slides[current].classList.remove("active");
+        current = nextIndex;
+        slides[current].classList.add("active");
+      }
+
+      function start() {
+        if (timer) return;
+        timer = setInterval(() => showSlide((current + 1) % slides.length), intervalMs);
+      }
+
+      function stop() {
+        if (!timer) return;
+        clearInterval(timer);
+        timer = null;
+      }
+
+      function resetFirst() {
+        slides[current].classList.remove("active");
+        current = 0;
+        slides[current].classList.add("active");
+      }
+
+      (card || slider).addEventListener("mouseenter", () => {
+        resetFirst();
+        start();
+      });
+      (card || slider).addEventListener("mouseleave", () => {
+        stop();
+        resetFirst();
+      });
+    });
+  })();
+</script>
+{% if config.custom_css %}
+<style>
+{{ config.custom_css }}
+</style>
+{% endif %}
+{% endblock %}

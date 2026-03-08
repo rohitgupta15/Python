@@ -1,0 +1,77 @@
+from django.contrib.auth import views as auth_views
+from django.urls import path
+
+from . import views
+
+urlpatterns = [
+    path("", views.home, name="home"),
+    path("register/", views.register_view, name="register"),
+    path("login/", views.login_view, name="login"),
+    path("password-reset/otp/", views.password_reset_otp_request, name="password_reset_otp_request"),
+    path("password-reset/otp/verify/", views.password_reset_otp_verify, name="password_reset_otp_verify"),
+    path(
+        "password-reset/",
+        auth_views.PasswordResetView.as_view(
+            template_name="salon/password_reset_form.html",
+            email_template_name="salon/password_reset_email.txt",
+            subject_template_name="salon/password_reset_subject.txt",
+        ),
+        name="password_reset",
+    ),
+    path(
+        "password-reset/done/",
+        auth_views.PasswordResetDoneView.as_view(template_name="salon/password_reset_done.html"),
+        name="password_reset_done",
+    ),
+    path(
+        "reset/<uidb64>/<token>/",
+        auth_views.PasswordResetConfirmView.as_view(template_name="salon/password_reset_confirm.html"),
+        name="password_reset_confirm",
+    ),
+    path(
+        "reset/done/",
+        auth_views.PasswordResetCompleteView.as_view(template_name="salon/password_reset_complete.html"),
+        name="password_reset_complete",
+    ),
+    path("logout/", views.logout_view, name="logout"),
+    path("worker/dashboard/", views.worker_dashboard, name="worker_dashboard"),
+    path("worker/salary-slips/", views.worker_salary_slips, name="worker_salary_slips"),
+    path("worker/visits/", views.worker_visit_entry, name="worker_visit_entry"),
+    path("worker/nav-color/", views.worker_nav_color_update, name="worker_nav_color_update"),
+    path("worker/customers/search/", views.worker_customer_search, name="worker_customer_search"),
+    path("worker/services/search/", views.worker_service_search, name="worker_service_search"),
+    path("worker/customers/", views.worker_customers, name="worker_customers"),
+    path("worker/style-advisor/", views.worker_style_advisor, name="worker_style_advisor"),
+    path("owner/", views.owner_dashboard, name="owner_dashboard"),
+    path("tasks/todos/", views.task_todos, name="task_todos"),
+    path("tasks/notes/", views.task_notes, name="task_notes"),
+    path("tasks/reminders/", views.task_reminders, name="task_reminders"),
+    path("owner/create/", views.salon_create, name="salon_create"),
+    path("owner/<slug:slug>/edit/", views.salon_edit, name="salon_edit"),
+    path("owner/<slug:slug>/customers/", views.salon_customers, name="salon_customers"),
+    path("owner/<slug:slug>/customers/search/", views.salon_customer_search, name="salon_customer_search"),
+    path("owner/<slug:slug>/workers/", views.salon_workers, name="salon_workers"),
+    path("owner/<slug:slug>/incentives/", views.salon_incentive_campaigns, name="salon_incentive_campaigns"),
+    path("owner/<slug:slug>/appointments/", views.salon_appointments, name="salon_appointments"),
+    path("owner/<slug:slug>/visits/", views.salon_visits, name="salon_visits"),
+    path("owner/<slug:slug>/offers/", views.salon_offers, name="salon_offers"),
+    path("owner/<slug:slug>/whatsapp/", views.salon_whatsapp_campaign, name="salon_whatsapp_campaign"),
+    path("owner/<slug:slug>/services/search/", views.salon_service_search, name="salon_service_search"),
+    path("owner/<slug:slug>/pos/", views.salon_pos, name="salon_pos"),
+    path("owner/<slug:slug>/inventory/", views.salon_inventory, name="salon_inventory"),
+    path("owner/<slug:slug>/reports/", views.salon_reports, name="salon_reports"),
+    path("owner/<slug:slug>/style-advisor/", views.owner_style_advisor, name="owner_style_advisor"),
+    path("owner/<slug:slug>/pos/bill/<int:bill_id>/", views.salon_pos_bill_detail, name="salon_pos_bill_detail"),
+    # Loyalty program URLs
+    path("owner/<slug:slug>/loyalty/", views.salon_loyalty_dashboard, name="salon_loyalty"),
+    path("owner/<slug:slug>/loyalty/settings/", views.salon_loyalty_settings, name="salon_loyalty_settings"),
+    path("owner/<slug:slug>/loyalty/customer/<int:customer_id>/", views.customer_loyalty_detail, name="customer_loyalty_detail"),
+    path("owner/<slug:slug>/loyalty/customer/<int:customer_id>/adjust/", views.adjust_customer_points, name="adjust_customer_points"),
+    path("owner/<slug:slug>/pos/bill/<int:bill_id>/loyalty/", views.process_loyalty_for_bill, name="process_loyalty_for_bill"),
+    # Receipt URLs
+    path("owner/<slug:slug>/pos/bill/<int:bill_id>/receipt/whatsapp/", views.send_receipt_whatsapp, name="send_receipt_whatsapp"),
+    path("owner/<slug:slug>/pos/bill/<int:bill_id>/receipt/email/", views.send_receipt_email, name="send_receipt_email"),
+    path("owner/<slug:slug>/pos/bill/<int:bill_id>/receipt/pdf/", views.download_receipt_pdf, name="download_receipt_pdf"),
+    path("owner/<slug:slug>/pos/bill/<int:bill_id>/receipt/view/", views.view_receipt_online, name="view_receipt_online"),
+    path("saloon/<slug:slug>/", views.salon_public_page, name="salon_public_page"),
+]

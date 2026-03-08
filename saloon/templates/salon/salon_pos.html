@@ -1,0 +1,570 @@
+{% extends "salon/base.html" %}
+
+{% block title %}Billing & POS - {{ salon.name }}{% endblock %}
+
+{% block content %}
+<section class="row-head">
+  <h2>Billing & POS: {{ salon.name }}</h2>
+</section>
+{% include "salon/includes/owner_portal_nav.html" with active_tab="pos" %}
+
+<section class="panel">
+  <h3>Create Bill</h3>
+  <form method="post" id="pos-form">
+    {% csrf_token %}
+    <div class="edit-grid">
+      <div class="form-card">
+        {{ form.non_field_errors }}
+        <div class="form-group">
+          <label for="customer-search">Customer / Mobile</label>
+          <input
+            type="text"
+            id="customer-search"
+            placeholder="Search by name or mobile number"
+            autocomplete="off"
+            list="customer-list"
+          />
+          <datalist id="customer-list"></datalist>
+          <div class="visually-hidden" aria-hidden="true">
+            {{ form.customer }}
+          </div>
+          {% if form.customer.errors %}
+            <div class="field-errors">{{ form.customer.errors }}</div>
+          {% endif %}
+          <p class="hint">Type a name or phone to auto-suggest saved customers.</p>
+        </div>
+        <div class="field-grid">
+          <div class="form-group">
+            {{ form.payment_method.label_tag }}
+            {{ form.payment_method }}
+          </div>
+          <div class="form-group">
+            {{ form.discount_amount.label_tag }}
+            {{ form.discount_amount }}
+          </div>
+        </div>
+        <div class="field-grid">
+          <div class="form-group">
+            {{ form.tax_percent.label_tag }}
+            {{ form.tax_percent }}
+          </div>
+          <div class="form-group">
+            {{ form.amount_received.label_tag }}
+            {{ form.amount_received }}
+          </div>
+        </div>
+        <div class="form-group">
+          {{ form.notes.label_tag }}
+          {{ form.notes }}
+        </div>
+        <div class="loyalty-section" id="loyalty-section" style="display:none;">
+          <h4>🎁 Loyalty Points</h4>
+          <p>Customer has <strong id="customer-points">0</strong> points available</p>
+          <label for="points_to_redeem">Points to Redeem:</label>
+          <input type="number" name="points_to_redeem" id="points_to_redeem" min="0" value="0">
+          <button type="button" class="btn btn-outline" id="pos-max-redeem-btn" style="margin-top: 6px;">Max Redeemable</button>
+          <p class="hint">Min 100 points required. 1 point = Rs 0.25 discount</p>
+          <p>Discount from points: <strong id="points-discount">Rs 0.00</strong></p>
+          <label for="birthday_coupon_code">Birthday Coupon Code:</label>
+          <input type="text" name="birthday_coupon_code" id="birthday_coupon_code" placeholder="BDAY-XXXXXX" />
+          <p class="hint">Enter active birthday coupon code if customer has one.</p>
+        </div>
+      </div>
+      <div class="form-card">
+        <h4>Items</h4>
+        <div class="service-picker">
+          <label for="service-search">Quick add service</label>
+          <div class="service-picker-row">
+            <input
+              type="text"
+              id="service-search"
+              placeholder="Search by service name"
+              autocomplete="off"
+              list="service-list"
+            />
+            <button type="button" class="btn btn-outline" id="add-service">Add selected service</button>
+          </div>
+          <datalist id="service-list">
+            {% for service in services %}
+              <option value="{{ service.name }}" data-id="{{ service.id }}" data-price="{{ service.price }}"></option>
+            {% endfor %}
+          </datalist>
+          <p class="hint" id="services-total">Services total: Rs 0.00</p>
+        </div>
+        <div id="bill-items">
+          <div class="pos-row">
+            <select name="service_id">
+              <option value="">Custom Item</option>
+              {% for service in services %}
+                <option value="{{ service.id }}" data-name="{{ service.name }}" data-price="{{ service.price }}">{{ service.name }} - Rs {{ service.price|floatformat:2 }}</option>
+              {% endfor %}
+            </select>
+            <input type="text" name="item_name" placeholder="Item/Service name" />
+            <input type="number" name="qty" min="1" value="1" />
+            <input type="number" name="price" min="0" step="0.01" placeholder="Unit price" />
+          </div>
+        </div>
+        <div class="action-row">
+          <button type="button" class="btn btn-outline" id="add-item">Add custom row</button>
+          <button type="submit" class="btn">Create Bill</button>
+        </div>
+      </div>
+    </div>
+  </form>
+</section>
+
+<style>
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.field-grid {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.service-picker {
+  margin-bottom: 0.75rem;
+}
+.service-picker-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.service-picker-row input {
+  flex: 1;
+}
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+.field-errors {
+  color: #dc2626;
+  font-size: 0.85rem;
+}
+.hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+#services-total {
+  margin-top: 0.25rem;
+  font-weight: 600;
+}
+</style>
+
+<section class="panel">
+  <h3>Recent Bills</h3>
+  <form method="get" class="action-row" style="margin-bottom: 12px;">
+    <label for="date_from" class="hint">From</label>
+    <input type="date" id="date_from" name="date_from" value="{{ date_from }}" />
+    <label for="date_to" class="hint">To</label>
+    <input type="date" id="date_to" name="date_to" value="{{ date_to }}" />
+    <label for="page_size" class="hint">Rows</label>
+    <select id="page_size" name="page_size">
+      <option value="5" {% if page_size == 5 %}selected{% endif %}>5</option>
+      <option value="10" {% if page_size == 10 %}selected{% endif %}>10</option>
+      <option value="20" {% if page_size == 20 %}selected{% endif %}>20</option>
+    </select>
+    <button class="btn btn-outline" type="submit">Apply</button>
+    <a class="btn btn-outline" href="{% url 'salon_pos' salon.slug %}">Clear</a>
+    <span class="hint">Quick:</span>
+    <a class="btn btn-outline {% if selected_preset == 'today' %}active{% endif %}" href="?{{ today_preset_query }}">Today</a>
+    <a class="btn btn-outline {% if selected_preset == 'week' %}active{% endif %}" href="?{{ week_preset_query }}">This Week</a>
+    <a class="btn btn-outline {% if selected_preset == 'month' %}active{% endif %}" href="?{{ month_preset_query }}">This Month</a>
+  </form>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Bill No</th>
+          <th>Date</th>
+          <th>Customer</th>
+          <th>Total</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for bill in bills_page %}
+          <tr>
+            <td>{{ bill.bill_number }}</td>
+            <td>{{ bill.bill_date }}</td>
+            <td>{{ bill.customer.full_name|default:"Walk-in" }}</td>
+            <td>Rs {{ bill.total_amount|floatformat:2 }}</td>
+            <td>{{ bill.get_payment_status_display }}</td>
+            <td><a class="btn btn-outline" href="{% url 'salon_pos_bill_detail' salon.slug bill.id %}">Invoice</a></td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6">No bills yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if bills_page.paginator.num_pages > 1 %}
+    <div class="action-row" style="margin-top: 12px;">
+      {% if bills_page.has_previous %}
+        <a class="btn btn-outline" href="?{{ bill_filter_query }}&bill_page=1">First</a>
+        <a class="btn btn-outline" href="?{{ bill_filter_query }}&bill_page={{ bills_page.previous_page_number }}">Previous</a>
+      {% endif %}
+      <span class="hint">Page {{ bills_page.number }} of {{ bills_page.paginator.num_pages }}</span>
+      {% if bills_page.has_next %}
+        <a class="btn btn-outline" href="?{{ bill_filter_query }}&bill_page={{ bills_page.next_page_number }}">Next</a>
+        <a class="btn btn-outline" href="?{{ bill_filter_query }}&bill_page={{ bills_page.paginator.num_pages }}">Last</a>
+      {% endif %}
+    </div>
+  {% endif %}
+</section>
+
+<script>
+  (function () {
+    const customerSearchUrl = "{% url 'salon_customer_search' salon.slug %}";
+    const serviceSearchUrl = "{% url 'salon_service_search' salon.slug %}";
+    const customerSearchInput = document.getElementById("customer-search");
+    const customerField = document.querySelector('input[name="customer"]');
+    const customerDatalist = document.getElementById("customer-list");
+    const serviceSearchInput = document.getElementById("service-search");
+    const addServiceBtn = document.getElementById("add-service");
+    const servicesTotalEl = document.getElementById("services-total");
+    const serviceOptions = `{% for service in services %}<option value="{{ service.id }}" data-name="{{ service.name }}" data-price="{{ service.price }}">{{ service.name|escapejs }} - Rs {{ service.price|floatformat:2 }}</option>{% endfor %}`;
+    const serviceList = document.getElementById("service-list");
+    const loyaltySection = document.getElementById("loyalty-section");
+    const customerPointsEl = document.getElementById("customer-points");
+    const pointsToRedeemInput = document.getElementById("points_to_redeem");
+    const pointsDiscountEl = document.getElementById("points-discount");
+    const maxRedeemBtn = document.getElementById("pos-max-redeem-btn");
+    const addItemBtn = document.getElementById("add-item");
+    const container = document.getElementById("bill-items");
+
+    let lastCustomerResults = [];
+    let lastServiceResults = [];
+    const customerCatalog = [
+      {% for customer in form.customer.field.queryset %}
+        {
+          id: "{{ customer.id }}",
+          name: "{{ customer.full_name|default:''|escapejs }}",
+          phone: "{{ customer.phone|default:''|escapejs }}",
+          whatsapp: "{{ customer.whatsapp_number|default:''|escapejs }}",
+          points: {{ customer.loyalty_points|default:0 }},
+          display: "{{ customer.full_name|default:''|escapejs }}{% if customer.phone %} ({{ customer.phone|escapejs }}){% endif %}",
+        },
+      {% endfor %}
+    ];
+
+    function updateServiceTotals() {
+      if (!servicesTotalEl) return;
+      let total = 0;
+      container.querySelectorAll(".pos-row").forEach((row) => {
+        const qty = parseFloat(row.querySelector("input[name='qty']").value) || 0;
+        const price = parseFloat(row.querySelector("input[name='price']").value) || 0;
+        total += qty * price;
+      });
+      servicesTotalEl.textContent = `Services total: Rs ${total.toFixed(2)}`;
+    }
+
+    function wireRow(row) {
+      const serviceSelect = row.querySelector("select[name='service_id']");
+      const itemNameInput = row.querySelector("input[name='item_name']");
+      const priceInput = row.querySelector("input[name='price']");
+      const qtyInput = row.querySelector("input[name='qty']");
+      serviceSelect.addEventListener("change", () => {
+        const opt = serviceSelect.options[serviceSelect.selectedIndex];
+        if (opt && opt.value) {
+          itemNameInput.value = opt.dataset.name || "";
+          priceInput.value = opt.dataset.price || "";
+        }
+        updateServiceTotals();
+      });
+      [qtyInput, priceInput].forEach((input) => {
+        input.addEventListener("input", updateServiceTotals);
+      });
+    }
+
+    function createServiceRow(service) {
+      const row = document.createElement("div");
+      row.className = "pos-row";
+      row.innerHTML = `
+        <select name="service_id">
+          <option value="">Custom Item</option>
+          ${serviceOptions}
+        </select>
+        <input type="text" name="item_name" placeholder="Item/Service name" />
+        <input type="number" name="qty" min="1" value="1" />
+        <input type="number" name="price" min="0" step="0.01" placeholder="Unit price" />
+      `;
+      container.appendChild(row);
+      wireRow(row);
+      if (service) {
+        const serviceSelect = row.querySelector("select[name='service_id']");
+        const itemNameInput = row.querySelector("input[name='item_name']");
+        const priceInput = row.querySelector("input[name='price']");
+        serviceSelect.value = service.id;
+        itemNameInput.value = service.name;
+        priceInput.value = service.price;
+      }
+      updateServiceTotals();
+      return row;
+    }
+
+    function setCustomerSuggestions(results) {
+      lastCustomerResults = (results || []).map((item) => ({
+        ...item,
+        normalized: (item.display || "").toLowerCase(),
+        digits: [
+          (item.phone || "").replace(/\D/g, ""),
+          (item.whatsapp || "").replace(/\D/g, ""),
+        ].filter(Boolean),
+      }));
+      if (!customerDatalist) return;
+      customerDatalist.innerHTML = "";
+      lastCustomerResults.forEach((item) => {
+        const option = document.createElement("option");
+        option.value = item.display;
+        customerDatalist.appendChild(option);
+      });
+    }
+
+    function setServiceSuggestions(results) {
+      lastServiceResults = results || [];
+      const datalist = serviceList || document.getElementById("service-list");
+      if (!datalist) return;
+      datalist.innerHTML = "";
+      lastServiceResults.forEach((item) => {
+        const option = document.createElement("option");
+        option.value = item.name;
+        datalist.appendChild(option);
+      });
+    }
+
+    function fetchCustomerSuggestions(query) {
+      if (!customerSearchUrl || !query || query.length < 2) {
+        setCustomerSuggestions([]);
+        return;
+      }
+      fetch(`${customerSearchUrl}?q=${encodeURIComponent(query)}`)
+        .then((response) => response.json())
+        .then((data) => setCustomerSuggestions(data.results))
+        .catch(() => {
+          setCustomerSuggestions([]);
+        });
+    }
+
+    function fetchServiceSuggestions(query) {
+      if (!serviceSearchUrl || !query || query.length < 1) {
+        setServiceSuggestions([]);
+        return;
+      }
+      fetch(`${serviceSearchUrl}?q=${encodeURIComponent(query)}`)
+        .then((response) => response.json())
+        .then((data) => setServiceSuggestions(data.results))
+        .catch(() => {
+          setServiceSuggestions([]);
+        });
+    }
+
+    function findService(searchValue) {
+      if (!searchValue) return null;
+      const normalized = searchValue.trim().toLowerCase();
+      return (
+        lastServiceResults.find((service) => service.name.toLowerCase() === normalized) ||
+        lastServiceResults.find((service) => service.name.toLowerCase().includes(normalized))
+      );
+    }
+
+    function addServiceFromSearch() {
+      const value = serviceSearchInput.value;
+      const service = findService(value);
+      if (service) {
+        createServiceRow(service);
+        serviceSearchInput.value = "";
+      }
+    }
+
+    function resolveCustomer(value) {
+      if (!value) return null;
+      const normalized = value.trim().toLowerCase();
+      const localMatches = customerCatalog.filter((item) => {
+        const name = (item.name || "").trim().toLowerCase();
+        const display = (item.display || "").trim().toLowerCase();
+        return (
+          name === normalized ||
+          display === normalized ||
+          name.includes(normalized) ||
+          normalized.includes(name) ||
+          display.includes(normalized) ||
+          normalized.includes(display)
+        );
+      });
+      if (localMatches.length === 1) {
+        return localMatches[0];
+      }
+      const localDigits = value.replace(/\D/g, "");
+      if (localDigits) {
+        const localDigitMatches = customerCatalog.filter((item) => {
+          const phoneDigits = (item.phone || "").replace(/\D/g, "");
+          const waDigits = (item.whatsapp || "").replace(/\D/g, "");
+          return (
+            (phoneDigits && (phoneDigits.includes(localDigits) || localDigits.includes(phoneDigits))) ||
+            (waDigits && (waDigits.includes(localDigits) || localDigits.includes(waDigits)))
+          );
+        });
+        if (localDigitMatches.length === 1) {
+          return localDigitMatches[0];
+        }
+      }
+      const candidates = lastCustomerResults.filter((item) => {
+        const baseName = (item.display || "").split("(")[0].trim().toLowerCase();
+        return (
+          item.normalized === normalized ||
+          baseName === normalized ||
+          item.normalized.includes(normalized) ||
+          normalized.includes(item.normalized) ||
+          baseName.includes(normalized) ||
+          normalized.includes(baseName)
+        );
+      });
+      if (candidates.length === 1) {
+        return candidates[0];
+      }
+      const digits = value.replace(/\D/g, "");
+      if (digits) {
+        const digitCandidates = lastCustomerResults.filter((item) =>
+          item.digits.some((digit) => digit.includes(digits) || digits.includes(digit))
+        );
+        if (digitCandidates.length === 1) {
+          return digitCandidates[0];
+        }
+      }
+      return null;
+    }
+
+    function updateSelectedCustomer(customer) {
+      if (customerField) {
+        customerField.value = customer ? customer.id : "";
+      }
+      if (customerSearchInput && customer) {
+        customerSearchInput.value = customer.display;
+      }
+      if (customerPointsEl) {
+        customerPointsEl.textContent = customer ? customer.points : "0";
+      }
+      if (loyaltySection) {
+        loyaltySection.style.display = customer && customer.points > 0 ? "block" : "none";
+      }
+      updatePointsDiscount();
+    }
+
+    function syncCustomerFromSearch() {
+      if (!customerSearchInput) return;
+      const match = resolveCustomer(customerSearchInput.value);
+      updateSelectedCustomer(match);
+    }
+
+    function updatePointsDiscount() {
+      if (!pointsToRedeemInput || !pointsDiscountEl) return;
+      const points = parseInt(pointsToRedeemInput.value) || 0;
+      const minPoints = 100;
+      const discountPerPoint = 0.25;
+      if (points >= minPoints) {
+        const discount = points * discountPerPoint;
+        pointsDiscountEl.textContent = "Rs " + discount.toFixed(2);
+      } else {
+        pointsDiscountEl.textContent = "Rs 0.00 (Min " + minPoints + " points required)";
+      }
+    }
+
+    function applyMaxRedeemablePoints() {
+      if (!pointsToRedeemInput || !customerPointsEl) return;
+      const availablePoints = parseInt(customerPointsEl.textContent || "0", 10) || 0;
+      if (!availablePoints) {
+        alert("Select customer with available points first.");
+        return;
+      }
+
+      const minPoints = 100;
+      const redeemValue = 0.25;
+      let subtotal = 0;
+      container.querySelectorAll(".pos-row").forEach((row) => {
+        const qty = parseFloat(row.querySelector("input[name='qty']").value) || 0;
+        const price = parseFloat(row.querySelector("input[name='price']").value) || 0;
+        subtotal += qty * price;
+      });
+      const manualDiscountInput = document.querySelector("input[name='discount_amount']");
+      const manualDiscount = manualDiscountInput ? (parseFloat(manualDiscountInput.value) || 0) : 0;
+      const payableBeforePoints = Math.max(0, subtotal - manualDiscount);
+      const maxByAmount = Math.floor(payableBeforePoints / redeemValue);
+      const maxRedeemable = Math.min(availablePoints, maxByAmount);
+
+      if (maxRedeemable < minPoints) {
+        pointsToRedeemInput.value = 0;
+        updatePointsDiscount();
+        alert("Minimum 100 points required for redemption.");
+        return;
+      }
+
+      pointsToRedeemInput.value = maxRedeemable;
+      updatePointsDiscount();
+    }
+
+    if (customerSearchInput) {
+      customerSearchInput.addEventListener("input", (event) => {
+        fetchCustomerSuggestions(event.target.value);
+        if (customerField) {
+          customerField.value = "";
+        }
+      });
+      customerSearchInput.addEventListener("change", syncCustomerFromSearch);
+      customerSearchInput.addEventListener("blur", syncCustomerFromSearch);
+    }
+    const posForm = document.getElementById("pos-form");
+    if (posForm) {
+      posForm.addEventListener("submit", () => {
+        syncCustomerFromSearch();
+      });
+    }
+
+    if (pointsToRedeemInput) {
+      pointsToRedeemInput.addEventListener("input", updatePointsDiscount);
+    }
+    if (maxRedeemBtn) {
+      maxRedeemBtn.addEventListener("click", applyMaxRedeemablePoints);
+    }
+
+    if (serviceSearchInput) {
+      serviceSearchInput.addEventListener("input", (event) => {
+        fetchServiceSuggestions(event.target.value);
+      });
+      serviceSearchInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          addServiceFromSearch();
+        }
+      });
+    }
+
+    if (addServiceBtn) {
+      addServiceBtn.addEventListener("click", addServiceFromSearch);
+    }
+
+    wireRow(container.querySelector(".pos-row"));
+    updateServiceTotals();
+
+    if (addItemBtn) {
+      addItemBtn.addEventListener("click", () => {
+        createServiceRow();
+      });
+    }
+
+  })();
+</script>
+
+{% endblock %}

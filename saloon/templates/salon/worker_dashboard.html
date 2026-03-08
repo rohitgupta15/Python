@@ -1,0 +1,70 @@
+{% extends "salon/base.html" %}
+
+{% block title %}Worker Dashboard{% endblock %}
+
+{% block content %}
+<section class="row-head">
+  <h2>Welcome {{ worker.full_name }} - {{ salon.name }}</h2>
+</section>
+{% include "salon/includes/worker_portal_nav.html" with active_tab="dashboard" worker=worker salon=salon %}
+
+<section class="card-grid report-grid">
+  <article class="card">
+    <h3>Today</h3>
+    <p>Visits: {{ day_stats.visits|default:0 }}</p>
+    <p>Customers: {{ day_stats.customers|default:0 }}</p>
+    <p>Revenue: Rs {{ day_stats.revenue|default:0|floatformat:2 }}</p>
+  </article>
+  <article class="card">
+    <h3>This Week</h3>
+    <p>Visits: {{ week_stats.visits|default:0 }}</p>
+    <p>Customers: {{ week_stats.customers|default:0 }}</p>
+    <p>Revenue: Rs {{ week_stats.revenue|default:0|floatformat:2 }}</p>
+  </article>
+  <article class="card">
+    <h3>This Month</h3>
+    <p>Visits: {{ month_stats.visits|default:0 }}</p>
+    <p>Customers: {{ month_stats.customers|default:0 }}</p>
+    <p>Revenue: Rs {{ month_stats.revenue|default:0|floatformat:2 }}</p>
+  </article>
+</section>
+
+<section class="panel">
+  <h3>Recent Visit Entries</h3>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Customer</th>
+          <th>Service</th>
+          <th>Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in recent_visits %}
+          <tr>
+            <td>{{ item.visit_date }}</td>
+            <td>{{ item.customer.full_name }}</td>
+            <td>{{ item.service_names_display }}</td>
+            <td>Rs {{ item.amount_paid|floatformat:2 }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="4">No visit entries yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if recent_visits.has_other_pages %}
+    <div class="pagination">
+      {% if recent_visits.has_previous %}
+        <a class="btn btn-outline" href="?{% if recent_querystring %}{{ recent_querystring }}&{% endif %}recent_page={{ recent_visits.previous_page_number }}">Previous</a>
+      {% endif %}
+      <span class="pagination-text">Page {{ recent_visits.number }} of {{ recent_visits.paginator.num_pages }}</span>
+      {% if recent_visits.has_next %}
+        <a class="btn btn-outline" href="?{% if recent_querystring %}{{ recent_querystring }}&{% endif %}recent_page={{ recent_visits.next_page_number }}">Next</a>
+      {% endif %}
+    </div>
+  {% endif %}
+</section>
+{% endblock %}
