@@ -1,0 +1,113 @@
+{% extends "salon/base.html" %}
+
+{% block title %}Salary Slips{% endblock %}
+
+{% block content %}
+<section class="row-head">
+  <h2>Salary Slips - {{ worker.full_name }}</h2>
+</section>
+{% include "salon/includes/worker_portal_nav.html" with active_tab="salary_slips" worker=worker salon=salon %}
+
+<section class="panel">
+  <form method="get" class="inline-form">
+    <label for="salary-year">Year</label>
+    <select id="salary-year" name="year">
+      {% for year in year_choices %}
+        <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>{{ year }}</option>
+      {% endfor %}
+    </select>
+    <label for="salary-month">Month</label>
+    <select id="salary-month" name="month">
+      <option value="1" {% if selected_month == 1 %}selected{% endif %}>January</option>
+      <option value="2" {% if selected_month == 2 %}selected{% endif %}>February</option>
+      <option value="3" {% if selected_month == 3 %}selected{% endif %}>March</option>
+      <option value="4" {% if selected_month == 4 %}selected{% endif %}>April</option>
+      <option value="5" {% if selected_month == 5 %}selected{% endif %}>May</option>
+      <option value="6" {% if selected_month == 6 %}selected{% endif %}>June</option>
+      <option value="7" {% if selected_month == 7 %}selected{% endif %}>July</option>
+      <option value="8" {% if selected_month == 8 %}selected{% endif %}>August</option>
+      <option value="9" {% if selected_month == 9 %}selected{% endif %}>September</option>
+      <option value="10" {% if selected_month == 10 %}selected{% endif %}>October</option>
+      <option value="11" {% if selected_month == 11 %}selected{% endif %}>November</option>
+      <option value="12" {% if selected_month == 12 %}selected{% endif %}>December</option>
+    </select>
+    <button class="btn" type="submit">Apply</button>
+  </form>
+</section>
+
+<section class="card-grid report-grid">
+  <article class="card">
+    <h3>Yearly Total</h3>
+    <p class="report-value">Rs {{ yearly_total|floatformat:2 }}</p>
+    <p class="hint">{{ selected_year }}</p>
+  </article>
+  <article class="card">
+    <h3>Monthly Total</h3>
+    <p class="report-value">Rs {{ monthly_total|floatformat:2 }}</p>
+    <p class="hint">{{ selected_month }}/{{ selected_year }}</p>
+  </article>
+</section>
+
+<section class="panel">
+  <h3>Month-wise Summary ({{ selected_year }})</h3>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Month</th>
+          <th>Payments</th>
+          <th>Total Paid</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in monthly_summary %}
+          <tr>
+            <td>{{ row.period_month }}</td>
+            <td>{{ row.payments }}</td>
+            <td>Rs {{ row.total_paid|floatformat:2 }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="3">No salary payments found for this year.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="panel">
+  <h3>Salary Slips ({{ selected_month }}/{{ selected_year }})</h3>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Paid On</th>
+          <th>Amount</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for slip in slips %}
+          <tr>
+            <td>{{ slip.paid_on }}</td>
+            <td>Rs {{ slip.amount_paid|floatformat:2 }}</td>
+            <td>{{ slip.notes|default:"-" }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="3">No salary slips for selected month.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if slips.has_other_pages %}
+    <div class="pagination">
+      {% if slips.has_previous %}
+        <a class="btn btn-outline" href="?{% if slips_querystring %}{{ slips_querystring }}&{% endif %}slips_page={{ slips.previous_page_number }}">Previous</a>
+      {% endif %}
+      <span class="pagination-text">Page {{ slips.number }} of {{ slips.paginator.num_pages }}</span>
+      {% if slips.has_next %}
+        <a class="btn btn-outline" href="?{% if slips_querystring %}{{ slips_querystring }}&{% endif %}slips_page={{ slips.next_page_number }}">Next</a>
+      {% endif %}
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

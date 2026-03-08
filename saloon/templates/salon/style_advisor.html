@@ -1,0 +1,130 @@
+{% extends "salon/base.html" %}
+{% load static %}
+
+{% block title %}AI Style Advisor - {{ salon.name }}{% endblock %}
+
+{% block content %}
+<section class="row-head">
+  <h2>AI Style Advisor - {{ salon.name }}</h2>
+  <p class="hint">Upload customer face/hair image and get haircut, beard and skin-care recommendations.</p>
+</section>
+
+{% if not is_worker_user %}
+  {% include "salon/includes/owner_portal_nav.html" with active_tab="style_ai" salon=salon %}
+{% else %}
+  {% include "salon/includes/worker_portal_nav.html" with active_tab="style_ai" worker=worker_profile salon=salon %}
+{% endif %}
+
+<section class="edit-grid">
+  <div class="panel">
+    <h3>Upload + Analyze</h3>
+    <form method="post" enctype="multipart/form-data" class="form-card">
+      {% csrf_token %}
+      <input type="hidden" name="form_type" value="save_consultation" />
+      {{ form.as_p }}
+      <button class="btn" type="submit">Generate AI Suggestions</button>
+    </form>
+  </div>
+
+  <div class="panel">
+    <h3>Recent Consultations</h3>
+    <ul class="simple-list">
+      {% for item in consultations %}
+        <li>
+          <div>
+            <strong>{{ item.customer_name|default:"Walk-in Customer" }}</strong><br />
+            <small>{{ item.created_at }} | {{ item.get_gender_display }} | {{ item.get_face_shape_display }}</small>
+          </div>
+          <a class="btn btn-outline" href="?consultation={{ item.id }}">Open</a>
+        </li>
+      {% empty %}
+        <li>No consultations yet.</li>
+      {% endfor %}
+    </ul>
+    {% if consultations.has_other_pages %}
+      <div class="pagination">
+        {% if consultations.has_previous %}
+          <a class="btn btn-outline" href="?{% if consultations_querystring %}{{ consultations_querystring }}&{% endif %}consultations_page={{ consultations.previous_page_number }}">Previous</a>
+        {% endif %}
+        <span class="pagination-text">Page {{ consultations.number }} of {{ consultations.paginator.num_pages }}</span>
+        {% if consultations.has_next %}
+          <a class="btn btn-outline" href="?{% if consultations_querystring %}{{ consultations_querystring }}&{% endif %}consultations_page={{ consultations.next_page_number }}">Next</a>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+</section>
+
+{% if selected_consultation %}
+<section class="panel">
+  <h3>Recommendation Summary</h3>
+  <p class="hint">Recommendation engine: {{ selected_consultation.suggestion_source|upper }}</p>
+  <div class="edit-grid" style="margin-bottom: 16px;">
+    <article class="card">
+      <h4>Uploaded Customer Photo</h4>
+      <img
+        src="{{ selected_consultation.reference_image.url }}"
+        alt="Uploaded customer"
+        style="width: 100%; max-width: 320px; border-radius: 10px; object-fit: cover;"
+      />
+    </article>
+    <article class="card">
+      <h4>AI Transformed Preview</h4>
+      {% if selected_consultation.transformed_preview_image %}
+        <img
+          src="{{ selected_consultation.transformed_preview_image.url }}"
+          alt="AI transformed preview"
+          style="width: 100%; max-width: 320px; border-radius: 10px; object-fit: cover;"
+        />
+      {% else %}
+        <p class="hint">Select a style card below to generate preview.</p>
+      {% endif %}
+    </article>
+  </div>
+  <div class="edit-grid">
+    <article class="card">
+      <h4>Haircut</h4>
+      <p>{{ selected_consultation.suggested_haircut }}</p>
+    </article>
+    <article class="card">
+      <h4>Beard</h4>
+      <p>{{ selected_consultation.suggested_beard|default:"No beard recommendation" }}</p>
+    </article>
+    <article class="card">
+      <h4>Facial</h4>
+      <p>{{ selected_consultation.suggested_facial }}</p>
+    </article>
+    <article class="card">
+      <h4>Scrub</h4>
+      <p>{{ selected_consultation.suggested_scrub }}</p>
+    </article>
+  </div>
+</section>
+
+<section class="panel">
+  <h3>Style Gallery Suggestions</h3>
+  <p class="hint">Customer can choose one of these looks and share with employee/barber.</p>
+  <div class="style-card-grid">
+    {% for item in style_cards %}
+      <article class="style-card">
+        <img src="{{ item.image }}" alt="{{ item.title }}" />
+        <h4>{{ item.title }}</h4>
+        <p>{{ item.category }}</p>
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="form_type" value="pick_style" />
+          <input type="hidden" name="consultation_id" value="{{ selected_consultation.id }}" />
+          <input type="hidden" name="selected_style" value="{{ item.title }}" />
+          <button class="btn btn-outline" type="submit">Select This Style</button>
+        </form>
+      </article>
+    {% endfor %}
+  </div>
+  {% if selected_consultation.selected_style %}
+    <div class="message success" style="margin-top: 12px;">
+      Selected style for this consultation: <strong>{{ selected_consultation.selected_style }}</strong>
+    </div>
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}

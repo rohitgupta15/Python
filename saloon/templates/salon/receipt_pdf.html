@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Receipt - {{ bill.bill_number }}</title>
+  <style>
+    @media print {
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .no-print { display: none !important; }
+    }
+    body { 
+      font-family: 'Helvetica Neue', Arial, sans-serif; 
+      line-height: 1.5; 
+      color: #333; 
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .header { 
+      text-align: center; 
+      margin-bottom: 30px; 
+      padding-bottom: 20px;
+      border-bottom: 2px solid #d97706;
+    }
+    .header h1 { 
+      color: #d97706; 
+      margin: 0; 
+      font-size: 28px;
+    }
+    .salon-info { 
+      color: #666; 
+      font-size: 14px;
+      margin-top: 5px;
+    }
+    .bill-details {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+    }
+    .bill-details div { margin: 5px 0; }
+    table { 
+      width: 100%; 
+      border-collapse: collapse; 
+      margin: 20px 0; 
+    }
+    th, td { 
+      padding: 12px; 
+      text-align: left; 
+      border-bottom: 1px solid #ddd; 
+    }
+    th { 
+      background: #d97706; 
+      color: white;
+    }
+    .text-right { text-align: right; }
+    .text-center { text-align: center; }
+    .totals {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 8px;
+    }
+    .totals table { margin: 0; }
+    .totals .total-row { 
+      font-size: 18px; 
+      font-weight: bold;
+      color: #d97706;
+    }
+    .footer { 
+      text-align: center; 
+      margin-top: 40px; 
+      padding-top: 20px;
+      border-top: 1px solid #ddd;
+      color: #666;
+      font-size: 14px;
+    }
+    .print-btn {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 10px 20px;
+      background: #d97706;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .print-btn:hover { background: #b45309; }
+  </style>
+</head>
+<body>
+  <button class="print-btn no-print" onclick="window.print()">🖨️ Print / Save as PDF</button>
+  
+  <div class="header">
+    <h1>{{ salon.name }}</h1>
+    <div class="salon-info">
+      {% if salon.address %}{{ salon.address }}<br>{% endif %}
+      {% if salon.phone %}Phone: {{ salon.phone }}{% endif %}
+      {% if salon.email %} | Email: {{ salon.email }}{% endif %}
+    </div>
+  </div>
+  
+  <div class="bill-details">
+    <div>
+      <strong>Receipt No:</strong> {{ bill.bill_number }}<br>
+      <strong>Date:</strong> {{ bill.bill_date|date:"d-m-Y h:i A" }}
+    </div>
+    <div>
+      <strong>Customer:</strong><br>
+      {{ bill.customer.full_name|default:"Walk-in Customer" }}
+      {% if bill.customer %}<br>{{ bill.customer.phone }}{% endif %}
+    </div>
+  </div>
+  
+  <table>
+    <thead>
+      <tr>
+        <th>Item</th>
+        <th class="text-center">Qty</th>
+        <th class="text-right">Rate</th>
+        <th class="text-right">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in items %}
+      <tr>
+        <td>{{ item.item_name }}</td>
+        <td class="text-center">{{ item.quantity }}</td>
+        <td class="text-right">₹{{ item.unit_price|floatformat:2 }}</td>
+        <td class="text-right">₹{{ item.line_total|floatformat:2 }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  
+  <div class="totals">
+    <table>
+      <tr>
+        <td>Subtotal:</td>
+        <td class="text-right">₹{{ bill.subtotal|floatformat:2 }}</td>
+      </tr>
+      {% if bill.discount_amount > 0 %}
+      <tr>
+        <td>Discount:</td>
+        <td class="text-right">-₹{{ bill.discount_amount|floatformat:2 }}</td>
+      </tr>
+      {% endif %}
+      {% if bill.tax_percent > 0 %}
+      <tr>
+        <td>Tax ({{ bill.tax_percent }}%):</td>
+        <td class="text-right">₹{{ bill.tax_amount|floatformat:2 }}</td>
+      </tr>
+      {% endif %}
+      <tr class="total-row">
+        <td>GRAND TOTAL:</td>
+        <td class="text-right">₹{{ bill.total_amount|floatformat:2 }}</td>
+      </tr>
+    </table>
+  </div>
+  
+  <div style="margin-top: 20px;">
+    <p><strong>Payment Method:</strong> {{ bill.get_payment_method_display }}</p>
+    <p><strong>Payment Status:</strong> {{ bill.get_payment_status_display }}</p>
+    {% if bill.amount_received > 0 %}
+    <p><strong>Amount Received:</strong> ₹{{ bill.amount_received|floatformat:2 }}</p>
+    {% endif %}
+    {% if bill.balance_due > 0 %}
+    <p><strong>Balance Due:</strong> ₹{{ bill.balance_due|floatformat:2 }}</p>
+    {% endif %}
+  </div>
+  
+  {% if bill.points_earned > 0 or bill.points_redeemed > 0 %}
+  <div style="margin-top: 20px; background: #fff3cd; padding: 15px; border-radius: 8px;">
+    <strong>🎁 Loyalty Points</strong>
+    {% if bill.points_earned > 0 %}
+    <p>You earned <strong>{{ bill.points_earned }}</strong> points!</p>
+    {% endif %}
+    {% if bill.points_redeemed > 0 %}
+    <p>You redeemed <strong>{{ bill.points_redeemed }}</strong> points for ₹{{ bill.points_discount|floatformat:2 }} discount.</p>
+    {% endif %}
+  </div>
+  {% endif %}
+  
+  <div class="footer">
+    <p>Thank you for visiting {{ salon.name }}!</p>
+    <p>{% if salon.address %}{{ salon.address }}{% endif %}</p>
+  </div>
+</body>
+</html>

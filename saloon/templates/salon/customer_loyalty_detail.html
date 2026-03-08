@@ -1,0 +1,66 @@
+{% extends "salon/base.html" %}
+
+{% block title %}Customer Loyalty - {{ customer.full_name }}{% endblock %}
+
+{% block content %}
+<section class="row-head">
+  <h2>Customer Loyalty Detail</h2>
+  <div class="action-row">
+    <a class="btn btn-outline" href="{% url 'salon_loyalty' salon.slug %}">Back to Loyalty</a>
+    <a class="btn" href="{% url 'adjust_customer_points' salon.slug customer.id %}">Adjust Points</a>
+  </div>
+</section>
+{% include "salon/includes/owner_portal_nav.html" with active_tab="loyalty" salon=salon %}
+
+<section class="panel">
+  <h3>{{ customer.full_name }}</h3>
+  <div class="card-grid report-grid">
+    <article class="card">
+      <h4>Current Points</h4>
+      <p class="report-value">{{ customer.loyalty_points }}</p>
+    </article>
+    <article class="card">
+      <h4>Lifetime Points</h4>
+      <p class="report-value">{{ customer.lifetime_points }}</p>
+    </article>
+    <article class="card">
+      <h4>Tier</h4>
+      <p class="report-value">{{ customer.get_membership_tier_display }}</p>
+    </article>
+    <article class="card">
+      <h4>Redeemable Value</h4>
+      <p class="report-value">Rs {{ redeemable_value|floatformat:2 }}</p>
+    </article>
+  </div>
+</section>
+
+<section class="panel">
+  <h3>Transaction History</h3>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Type</th>
+          <th>Points</th>
+          <th>Balance</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for txn in transactions %}
+          <tr>
+            <td>{{ txn.created_at|date:"d-m-Y H:i" }}</td>
+            <td>{{ txn.get_transaction_type_display }}</td>
+            <td>{{ txn.points }}</td>
+            <td>{{ txn.balance_after }}</td>
+            <td>{{ txn.description|default:"-" }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5">No transactions found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,127 @@
+{% extends "salon/base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<section class="row-head">
+  <h2>{{ title }}</h2>
+  <p class="hint">{{ subtitle }}</p>
+</section>
+
+{% if nav_salon and not is_worker_user %}
+  {% include "salon/includes/owner_portal_nav.html" with active_tab=tab salon=nav_salon %}
+{% elif is_worker_user %}
+  {% include "salon/includes/worker_portal_nav.html" with active_tab=tab worker=worker_profile salon=worker_profile.salon %}
+{% endif %}
+
+<section class="task-tabs">
+  <a class="btn btn-outline {% if tab == 'todos' %}task-tab-active{% endif %}" href="{% url 'task_todos' %}">To-Do</a>
+  <a class="btn btn-outline {% if tab == 'notes' %}task-tab-active{% endif %}" href="{% url 'task_notes' %}">Notes</a>
+  <a class="btn btn-outline {% if tab == 'reminders' %}task-tab-active{% endif %}" href="{% url 'task_reminders' %}">Reminders</a>
+</section>
+
+<section class="edit-grid">
+  <div class="panel">
+    <h3>Add {{ title|slice:":-1" }}</h3>
+    <form method="post" class="form-card">
+      {% csrf_token %}
+      <input type="hidden" name="form_type" value="create_task" />
+      {{ task_form.as_p }}
+      <button class="btn" type="submit">Save</button>
+    </form>
+  </div>
+
+  <div class="panel">
+    <h3>Reminder Popup Preferences</h3>
+    <form method="post" class="form-card">
+      {% csrf_token %}
+      <input type="hidden" name="form_type" value="save_preferences" />
+      {{ preference_form.as_p }}
+      <button class="btn btn-outline" type="submit">Update Preferences</button>
+    </form>
+  </div>
+</section>
+
+<section class="panel">
+  <h3>Pending Items</h3>
+  <ul class="simple-list">
+    {% for task in pending_tasks %}
+      <li>
+        <div>
+          <strong>{{ task.title }}</strong>
+          <br />
+          <small>
+            Priority: {{ task.get_priority_display }}
+            {% if task.due_at %} | Due: {{ task.due_at }}{% endif %}
+          </small>
+          {% if task.details %}
+            <p class="hint">{{ task.details }}</p>
+          {% endif %}
+        </div>
+        <div class="action-row">
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="form_type" value="complete_task" />
+            <input type="hidden" name="task_id" value="{{ task.id }}" />
+            <button class="btn btn-outline" type="submit">Complete</button>
+          </form>
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="form_type" value="delete_task" />
+            <input type="hidden" name="task_id" value="{{ task.id }}" />
+            <button class="btn btn-danger" type="submit">Delete</button>
+          </form>
+        </div>
+      </li>
+    {% empty %}
+      <li>No pending items.</li>
+    {% endfor %}
+  </ul>
+  {% if pending_tasks.has_other_pages %}
+    <div class="pagination">
+      {% if pending_tasks.has_previous %}
+        <a class="btn btn-outline" href="?{% if pending_querystring %}{{ pending_querystring }}&{% endif %}pending_page={{ pending_tasks.previous_page_number }}">Previous</a>
+      {% endif %}
+      <span class="pagination-text">Page {{ pending_tasks.number }} of {{ pending_tasks.paginator.num_pages }}</span>
+      {% if pending_tasks.has_next %}
+        <a class="btn btn-outline" href="?{% if pending_querystring %}{{ pending_querystring }}&{% endif %}pending_page={{ pending_tasks.next_page_number }}">Next</a>
+      {% endif %}
+    </div>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h3>Completed Items</h3>
+  <ul class="simple-list">
+    {% for task in completed_tasks %}
+      <li>
+        <div>
+          <strong>{{ task.title }}</strong>
+          {% if task.due_at %}<br /><small>Due: {{ task.due_at }}</small>{% endif %}
+        </div>
+        <div class="action-row">
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="form_type" value="reopen_task" />
+            <input type="hidden" name="task_id" value="{{ task.id }}" />
+            <button class="btn btn-outline" type="submit">Reopen</button>
+          </form>
+        </div>
+      </li>
+    {% empty %}
+      <li>No completed items yet.</li>
+    {% endfor %}
+  </ul>
+  {% if completed_tasks.has_other_pages %}
+    <div class="pagination">
+      {% if completed_tasks.has_previous %}
+        <a class="btn btn-outline" href="?{% if completed_querystring %}{{ completed_querystring }}&{% endif %}completed_page={{ completed_tasks.previous_page_number }}">Previous</a>
+      {% endif %}
+      <span class="pagination-text">Page {{ completed_tasks.number }} of {{ completed_tasks.paginator.num_pages }}</span>
+      {% if completed_tasks.has_next %}
+        <a class="btn btn-outline" href="?{% if completed_querystring %}{{ completed_querystring }}&{% endif %}completed_page={{ completed_tasks.next_page_number }}">Next</a>
+      {% endif %}
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

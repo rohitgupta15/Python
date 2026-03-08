@@ -1,0 +1,41 @@
+<aside class="owner-side-nav" id="owner-side-nav">
+  <div class="owner-side-brand">Owner Menu</div>
+  <div class="owner-side-search">
+    <input type="search" id="owner-menu-search" placeholder="Search menu" />
+  </div>
+  <nav class="owner-side-links" id="owner-side-links">
+    <a class="{% if active_tab == 'overview' %}active{% endif %}" href="{% url 'salon_edit' salon.slug %}">Overview</a>
+    <a class="{% if active_tab == 'customers' %}active{% endif %}" href="{% url 'salon_customers' salon.slug %}">Customers</a>
+    <a class="{% if active_tab == 'workers' %}active{% endif %}" href="{% url 'salon_workers' salon.slug %}">Workers</a>
+    <a class="{% if active_tab == 'incentives' %}active{% endif %}" href="{% url 'salon_incentive_campaigns' salon.slug %}">Incentives</a>
+    <a class="{% if active_tab == 'appointments' %}active{% endif %}" href="{% url 'salon_appointments' salon.slug %}">Appointments</a>
+    <a class="{% if active_tab == 'visits' %}active{% endif %}" href="{% url 'salon_visits' salon.slug %}">Visits</a>
+    <a class="{% if active_tab == 'offers' %}active{% endif %}" href="{% url 'salon_offers' salon.slug %}">Offers</a>
+    <a class="{% if active_tab == 'whatsapp' %}active{% endif %}" href="{% url 'salon_whatsapp_campaign' salon.slug %}">WhatsApp</a>
+    <a class="{% if active_tab == 'pos' %}active{% endif %}" href="{% url 'salon_pos' salon.slug %}">Billing/POS</a>
+    <a class="{% if active_tab == 'inventory' %}active{% endif %}" href="{% url 'salon_inventory' salon.slug %}">Inventory</a>
+    <a class="{% if active_tab == 'reports' %}active{% endif %}" href="{% url 'salon_reports' salon.slug %}">Reports</a>
+    <a class="{% if active_tab == 'loyalty' %}active{% endif %}" href="{% url 'salon_loyalty' salon.slug %}">Loyalty</a>
+    <a class="{% if active_tab == 'style_ai' %}active{% endif %}" href="{% url 'owner_style_advisor' salon.slug %}">AI Style Advisor</a>
+    <a class="{% if active_tab == 'todos' %}active{% endif %}" href="{% url 'task_todos' %}">To-Do List</a>
+    <a class="{% if active_tab == 'notes' %}active{% endif %}" href="{% url 'task_notes' %}">Notes</a>
+    <a class="{% if active_tab == 'reminders' %}active{% endif %}" href="{% url 'task_reminders' %}">Reminders</a>
+    <a class="{% if active_tab == 'public' %}active{% endif %}" href="{% url 'salon_public_page' salon.slug %}" target="_blank">Public Page</a>
+  </nav>
+</aside>
+<script>
+  (function () {
+    document.body.classList.add("has-owner-side-nav");
+    const searchInput = document.getElementById("owner-menu-search");
+    const nav = document.getElementById("owner-side-links");
+    if (!searchInput || !nav) return;
+    const links = Array.from(nav.querySelectorAll("a"));
+    searchInput.addEventListener("input", function () {
+      const term = (searchInput.value || "").trim().toLowerCase();
+      links.forEach(function (link) {
+        const show = !term || link.textContent.toLowerCase().indexOf(term) >= 0;
+        link.style.display = show ? "" : "none";
+      });
+    });
+  })();
+</script>

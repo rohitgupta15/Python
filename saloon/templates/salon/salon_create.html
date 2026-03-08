@@ -1,0 +1,49 @@
+{% extends "salon/base.html" %}
+
+{% block title %}Create Saloon{% endblock %}
+
+{% block content %}
+<h2>Create Saloon</h2>
+<p class="hint">After creation, saloon status is pending. Admin must approve before public activation.</p>
+<form method="post" enctype="multipart/form-data" class="form-card wide">
+  {% csrf_token %}
+  {{ form.non_field_errors }}
+  {% for field in form %}
+    <p>
+      {{ field.label_tag }}
+      {{ field }}
+      {% if field.help_text %}<small class="hint">{{ field.help_text }}</small>{% endif %}
+      {{ field.errors }}
+    </p>
+  {% endfor %}
+  <p>
+    <button class="btn btn-outline" type="button" id="detect-location-btn">Use My Current Location</button>
+    <small class="hint">Tip: Paste a Google/OpenStreetMap share link in map URL. Coordinates will auto-fill when possible.</small>
+  </p>
+  <button class="btn" type="submit">Create</button>
+</form>
+<script>
+  (function () {
+    const latInput = document.getElementById("id_latitude");
+    const lngInput = document.getElementById("id_longitude");
+    const detectBtn = document.getElementById("detect-location-btn");
+    if (!latInput || !lngInput || !detectBtn) return;
+    detectBtn.addEventListener("click", function () {
+      if (!navigator.geolocation) {
+        alert("Geolocation is not supported in this browser.");
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        function (position) {
+          latInput.value = position.coords.latitude.toFixed(6);
+          lngInput.value = position.coords.longitude.toFixed(6);
+        },
+        function () {
+          alert("Unable to fetch your current location.");
+        },
+        { enableHighAccuracy: true, timeout: 12000 }
+      );
+    });
+  })();
+</script>
+{% endblock %}

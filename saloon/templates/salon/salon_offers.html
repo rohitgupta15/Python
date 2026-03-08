@@ -1,0 +1,44 @@
+{% extends "salon/base.html" %}
+
+{% block title %}Offers - {{ salon.name }}{% endblock %}
+
+{% block content %}
+<section class="row-head">
+  <h2>Offer Manager: {{ salon.name }}</h2>
+</section>
+{% include "salon/includes/owner_portal_nav.html" with active_tab="offers" %}
+
+<section class="edit-grid">
+  <div class="panel">
+    <h3>Create Offer</h3>
+    <form method="post" class="form-card">
+      {% csrf_token %}
+      <input type="hidden" name="form_type" value="add_offer" />
+      {{ form.as_p }}
+      <button class="btn" type="submit">Save Offer</button>
+    </form>
+  </div>
+
+  <div class="panel">
+    <h3>Existing Offers</h3>
+    <ul class="simple-list">
+      {% for offer in offers %}
+        <li>
+          <div>
+            <strong>{{ offer.title }}</strong><br />
+            <small>{{ offer.discount_percent }}% off | {{ offer.valid_from }} to {{ offer.valid_to }}</small>
+          </div>
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="form_type" value="delete_offer" />
+            <input type="hidden" name="offer_id" value="{{ offer.id }}" />
+            <button class="btn btn-danger" type="submit">Delete</button>
+          </form>
+        </li>
+      {% empty %}
+        <li>No offers yet.</li>
+      {% endfor %}
+    </ul>
+  </div>
+</section>
+{% endblock %}

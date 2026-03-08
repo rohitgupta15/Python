@@ -1,0 +1,568 @@
+{% extends "salon/base.html" %}
+
+{% block title %}Worker Visit Entry{% endblock %}
+
+{% block content %}
+<section class="row-head">
+  <h2>Attended Customer Entry - {{ worker.full_name }}</h2>
+</section>
+{% include "salon/includes/worker_portal_nav.html" with active_tab="visits" worker=worker salon=salon %}
+
+<section class="edit-grid">
+  <div class="panel">
+    <h3>Add Visit</h3>
+    <form method="post" class="form-card" id="worker-visit-form">
+      {% csrf_token %}
+      {{ form.non_field_errors }}
+
+      <div class="form-group">
+        <label for="customer-search">Customer / Mobile</label>
+        <input
+          type="text"
+          id="customer-search"
+          placeholder="Search by name or mobile number"
+          autocomplete="off"
+          list="customer-list"
+        />
+        <datalist id="customer-list"></datalist>
+        {{ form.customer }}
+        {% if form.customer.errors %}
+          <div class="field-errors">{{ form.customer.errors }}</div>
+        {% endif %}
+      </div>
+
+      <div class="form-group">
+        <label for="service-search">Quick Add Service</label>
+        <div class="action-row">
+          <input
+            type="text"
+            id="service-search"
+            placeholder="Search service(s): Haircut, Facial"
+            autocomplete="off"
+            list="service-list"
+          />
+          <button class="btn btn-outline" type="button" id="add-service-btn">Add Service</button>
+        </div>
+        <datalist id="service-list"></datalist>
+      </div>
+
+      <div class="form-group">
+        {{ form.services.label_tag }}
+        {{ form.services }}
+        {% if form.services.errors %}
+          <div class="field-errors">{{ form.services.errors }}</div>
+        {% endif %}
+      </div>
+
+      <div class="form-group">
+        {{ form.offer.label_tag }}
+        {{ form.offer }}
+      </div>
+
+      <div class="form-group">
+        {{ form.points_to_redeem.label_tag }}
+        <div class="action-row">
+          {{ form.points_to_redeem }}
+          <button class="btn btn-outline" type="button" id="worker-visit-max-redeem-btn">Max Redeemable</button>
+        </div>
+        <small class="hint" id="worker-visit-loyalty-info">Select customer to view available points.</small>
+      </div>
+
+      <div class="form-group">
+        {{ form.visit_date.label_tag }}
+        {{ form.visit_date }}
+      </div>
+
+      <div class="form-group">
+        {{ form.amount_paid.label_tag }}
+        {{ form.amount_paid }}
+      </div>
+
+      <div class="form-group">
+        {{ form.notes.label_tag }}
+        {{ form.notes }}
+      </div>
+
+      <button class="btn" type="submit">Save Visit</button>
+    </form>
+    <p class="hint" id="worker-selected-services-summary">No service selected yet.</p>
+    <p class="hint" id="worker-amount-calculation-summary"></p>
+  </div>
+  <div class="panel">
+    <h3>Notes</h3>
+    <p>Each saved entry is auto-mapped to your worker account.</p>
+    <p>Owner can use this to calculate your payout and monthly progress.</p>
+  </div>
+</section>
+
+<section class="panel">
+  <h3>Customer Dealing Summary</h3>
+  <form method="get" class="inline-form">
+    <label for="visit-filter">Filter</label>
+    <select id="visit-filter" name="filter">
+      <option value="weekly" {% if filter_mode == "weekly" %}selected{% endif %}>Weekly</option>
+      <option value="monthly" {% if filter_mode == "monthly" %}selected{% endif %}>Monthly</option>
+      <option value="range" {% if filter_mode == "range" %}selected{% endif %}>Date Range</option>
+    </select>
+    <label for="date-from">From</label>
+    <input id="date-from" type="date" name="date_from" value="{{ date_from }}">
+    <label for="date-to">To</label>
+    <input id="date-to" type="date" name="date_to" value="{{ date_to }}">
+    <button class="btn" type="submit">Apply</button>
+    <a class="btn btn-outline" href="{% url 'worker_visit_entry' %}?filter=monthly">Reset</a>
+  </form>
+  <p class="hint">Showing {{ filter_start }} to {{ filter_end }}</p>
+  <div class="card-grid report-grid">
+    <article class="card">
+      <h3>Total Visits</h3>
+      <p class="report-value">{{ summary.total_visits|default:0 }}</p>
+    </article>
+    <article class="card">
+      <h3>Unique Customers</h3>
+      <p class="report-value">{{ summary.total_customers|default:0 }}</p>
+    </article>
+    <article class="card">
+      <h3>Total Amount</h3>
+      <p class="report-value">Rs {{ summary.total_revenue|default:0|floatformat:2 }}</p>
+    </article>
+  </div>
+</section>
+
+<section class="panel">
+  <h3>Your Recent Entries</h3>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Customer</th>
+          <th>Service</th>
+          <th>Offer</th>
+          <th>Points Redeemed</th>
+          <th>Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for visit in visits %}
+          <tr>
+            <td>{{ visit.visit_date }}</td>
+            <td>{{ visit.customer.full_name }}</td>
+            <td>{{ visit.service_names_display }}</td>
+            <td>{{ visit.offer.title|default:"-" }}</td>
+            <td>{{ visit.points_redeemed|default:0 }}</td>
+            <td>Rs {{ visit.amount_paid|floatformat:2 }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6">No entries yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if visits.has_other_pages %}
+    <div class="pagination">
+      {% if visits.has_previous %}
+        <a class="btn btn-outline" href="?{% if visits_querystring %}{{ visits_querystring }}&{% endif %}visits_page={{ visits.previous_page_number }}">Previous</a>
+      {% endif %}
+      <span class="pagination-text">Page {{ visits.number }} of {{ visits.paginator.num_pages }}</span>
+      {% if visits.has_next %}
+        <a class="btn btn-outline" href="?{% if visits_querystring %}{{ visits_querystring }}&{% endif %}visits_page={{ visits.next_page_number }}">Next</a>
+      {% endif %}
+    </div>
+  {% endif %}
+</section>
+<style>
+  .form-group {
+    margin-bottom: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+  .field-errors {
+    color: #dc2626;
+    font-size: 0.85rem;
+  }
+</style>
+<script>
+  (function () {
+    const customerSearchUrl = "{% url 'worker_customer_search' %}";
+    const serviceSearchUrl = "{% url 'worker_service_search' %}";
+    const customerSearchField = document.getElementById("customer-search");
+    const customerField = document.getElementById("id_customer");
+    const customerList = document.getElementById("customer-list");
+    const serviceSearchField = document.getElementById("service-search");
+    const serviceList = document.getElementById("service-list");
+    const addServiceBtn = document.getElementById("add-service-btn");
+    const servicesField = document.getElementById("id_services");
+    const offerField = document.getElementById("id_offer");
+    const amountField = document.getElementById("id_amount_paid");
+    const pointsField = document.getElementById("id_points_to_redeem");
+    const maxRedeemBtn = document.getElementById("worker-visit-max-redeem-btn");
+    const loyaltyInfo = document.getElementById("worker-visit-loyalty-info");
+    const servicesSummary = document.getElementById("worker-selected-services-summary");
+    const calcSummary = document.getElementById("worker-amount-calculation-summary");
+    if (!servicesField || !amountField || !customerField) return;
+
+    let lastCustomerResults = [];
+    let lastServiceResults = [];
+    const selectedServiceIds = new Set();
+    const customerCatalog = [
+      {% for customer in form.customer.field.queryset %}
+        {
+          id: "{{ customer.id }}",
+          name: "{{ customer.full_name|default:''|escapejs }}",
+          phone: "{{ customer.phone|default:''|escapejs }}",
+          whatsapp: "{{ customer.whatsapp_number|default:''|escapejs }}",
+          points: {{ customer.loyalty_points|default:0 }},
+          display: "{{ customer.full_name|default:''|escapejs }}{% if customer.phone %} ({{ customer.phone|escapejs }}){% endif %}",
+        },
+      {% endfor %}
+    ];
+
+    const servicePrices = {
+      {% for service in form.services.field.queryset %}
+        "{{ service.id }}": parseFloat("{{ service.price }}"),
+      {% endfor %}
+    };
+    const serviceNames = {
+      {% for service in form.services.field.queryset %}
+        "{{ service.id }}": "{{ service.name|escapejs }}",
+      {% endfor %}
+    };
+    const serviceCatalog = [
+      {% for service in form.services.field.queryset %}
+        {
+          id: "{{ service.id }}",
+          name: "{{ service.name|escapejs }}",
+          category: "{{ service.category|default:''|escapejs }}",
+          price: "{{ service.price }}",
+        },
+      {% endfor %}
+    ];
+    const offerDiscounts = {
+      "": 0,
+      {% for offer in form.offer.field.queryset %}
+        "{{ offer.id }}": parseFloat("{{ offer.discount_percent }}"),
+      {% endfor %}
+    };
+
+    Array.from(servicesField.options).forEach((option) => {
+      if (option.selected) {
+        selectedServiceIds.add(String(option.value));
+      }
+    });
+
+    function syncSelectedServicesToField() {
+      Array.from(servicesField.options).forEach((option) => {
+        option.selected = selectedServiceIds.has(String(option.value));
+      });
+    }
+
+    function setCustomerSuggestions(results) {
+      lastCustomerResults = (results || []).map((item) => ({
+        ...item,
+        normalized: (item.display || "").toLowerCase(),
+        digits: [
+          (item.phone || "").replace(/\D/g, ""),
+          (item.whatsapp || "").replace(/\D/g, ""),
+        ].filter(Boolean),
+      }));
+      customerList.innerHTML = "";
+      lastCustomerResults.forEach((item) => {
+        const option = document.createElement("option");
+        option.value = item.display;
+        customerList.appendChild(option);
+      });
+    }
+
+    function setServiceSuggestions(results) {
+      lastServiceResults = results || [];
+      serviceList.innerHTML = "";
+      lastServiceResults.forEach((item) => {
+        const option = document.createElement("option");
+        option.value = formatServiceLabel(item);
+        serviceList.appendChild(option);
+      });
+    }
+
+    function formatServiceLabel(service) {
+      const category = service.category ? service.category : "-";
+      const amount = service.price ? service.price : "0";
+      return `${service.name} || ${category} || Rs ${amount}`;
+    }
+
+    function normalizeServiceQuery(query) {
+      if (!query) {
+        return "";
+      }
+      const firstPart = query.split("||")[0];
+      return firstPart.trim().toLowerCase();
+    }
+
+    function fetchCustomerSuggestions(query) {
+      if (!query || query.length < 2) {
+        setCustomerSuggestions([]);
+        return;
+      }
+      fetch(`${customerSearchUrl}?q=${encodeURIComponent(query)}`)
+        .then((response) => response.json())
+        .then((data) => setCustomerSuggestions(data.results))
+        .catch(() => setCustomerSuggestions([]));
+    }
+
+    function fetchServiceSuggestions(query) {
+      if (!query || query.length < 1) {
+        setServiceSuggestions([]);
+        return;
+      }
+      fetch(`${serviceSearchUrl}?q=${encodeURIComponent(query)}`)
+        .then((response) => response.json())
+        .then((data) => setServiceSuggestions(data.results))
+        .catch(() => setServiceSuggestions([]));
+    }
+
+    function resolveCustomer(text) {
+      if (!text) return null;
+      const normalized = text.trim().toLowerCase();
+      const localMatches = customerCatalog.filter((item) => {
+        const name = (item.name || "").trim().toLowerCase();
+        const display = (item.display || "").trim().toLowerCase();
+        return (
+          name === normalized ||
+          display === normalized ||
+          name.includes(normalized) ||
+          normalized.includes(name) ||
+          display.includes(normalized) ||
+          normalized.includes(display)
+        );
+      });
+      if (localMatches.length === 1) {
+        return localMatches[0];
+      }
+      const digits = text.replace(/\D/g, "");
+      if (digits) {
+        const localDigitMatches = customerCatalog.filter((item) => {
+          const phoneDigits = (item.phone || "").replace(/\D/g, "");
+          const waDigits = (item.whatsapp || "").replace(/\D/g, "");
+          return (
+            (phoneDigits && (phoneDigits.includes(digits) || digits.includes(phoneDigits))) ||
+            (waDigits && (waDigits.includes(digits) || digits.includes(waDigits)))
+          );
+        });
+        if (localDigitMatches.length === 1) {
+          return localDigitMatches[0];
+        }
+      }
+      const candidates = lastCustomerResults.filter((item) => {
+        const baseName = (item.display || "").split("(")[0].trim().toLowerCase();
+        return (
+          item.normalized === normalized ||
+          baseName === normalized ||
+          item.normalized.includes(normalized) ||
+          normalized.includes(item.normalized) ||
+          baseName.includes(normalized) ||
+          normalized.includes(baseName)
+        );
+      });
+      if (candidates.length === 1) {
+        return candidates[0];
+      }
+      const ajaxDigits = text.replace(/\D/g, "");
+      if (ajaxDigits) {
+        const digitCandidates = lastCustomerResults.filter((item) =>
+          item.digits.some((num) => num.includes(ajaxDigits) || ajaxDigits.includes(num))
+        );
+        if (digitCandidates.length === 1) {
+          return digitCandidates[0];
+        }
+      }
+      return null;
+    }
+
+    function syncCustomerSelection() {
+      const match = resolveCustomer(customerSearchField.value);
+      customerField.value = match ? match.id : "";
+      if (match) {
+        customerSearchField.value = match.display;
+      }
+      if (loyaltyInfo) {
+        loyaltyInfo.textContent = match
+          ? `Available loyalty points: ${match.points || 0}`
+          : "Select customer to view available points.";
+      }
+      calculateAmount();
+    }
+
+    function findService(query) {
+      if (!query) return null;
+      const normalized = normalizeServiceQuery(query);
+      const catalogMatch = (
+        serviceCatalog.find((item) => item.name.toLowerCase() === normalized) ||
+        serviceCatalog.find((item) => item.name.toLowerCase().includes(normalized))
+      );
+      if (catalogMatch) {
+        return catalogMatch;
+      }
+      const ajaxMatch = (
+        lastServiceResults.find((item) => item.name.toLowerCase() === normalized) ||
+        lastServiceResults.find((item) => item.name.toLowerCase().includes(normalized))
+      );
+      if (ajaxMatch) {
+        return ajaxMatch;
+      }
+      const optionMatch = Array.from(servicesField.options).find((opt) => {
+        return (opt.textContent || "").toLowerCase().includes(normalized);
+      });
+      if (!optionMatch) {
+        return null;
+      }
+      return {
+        id: optionMatch.value,
+        name: serviceNames[optionMatch.value] || optionMatch.textContent,
+      };
+    }
+
+    function parseServiceQueries(rawValue) {
+      return (rawValue || "")
+        .split(/[,\n;+|/]/)
+        .map((part) => part.trim())
+        .filter(Boolean);
+    }
+
+    function addQuickService() {
+      const queries = parseServiceQueries(serviceSearchField.value);
+      if (!queries.length) {
+        return;
+      }
+
+      let addedCount = 0;
+      queries.forEach((query) => {
+        const service = findService(query);
+        if (!service) {
+          return;
+        }
+        const option = Array.from(servicesField.options).find((opt) => opt.value === String(service.id));
+        if (option && !option.selected) {
+          selectedServiceIds.add(String(option.value));
+          addedCount += 1;
+        }
+      });
+
+      if (addedCount > 0) {
+        syncSelectedServicesToField();
+        serviceSearchField.value = "";
+        calculateAmount();
+      }
+    }
+
+    function calculateAmount() {
+      let subtotal = 0;
+      const names = [];
+      Array.from(selectedServiceIds).forEach((id) => {
+        subtotal += servicePrices[id] || 0;
+        if (serviceNames[id]) {
+          names.push(serviceNames[id]);
+        }
+      });
+
+      const discountPercent = offerField ? (offerDiscounts[offerField.value] || 0) : 0;
+      const discountValue = (subtotal * discountPercent) / 100;
+      let pointsDiscount = 0;
+      if (pointsField) {
+        const points = parseInt(pointsField.value || "0", 10) || 0;
+        const redeemValue = parseFloat(pointsField.dataset.redeemValue || "0.25");
+        pointsDiscount = points * redeemValue;
+      }
+      const total = Math.max(0, subtotal - discountValue - pointsDiscount);
+      amountField.value = total.toFixed(2);
+
+      if (servicesSummary) {
+        servicesSummary.textContent = names.length
+          ? `Selected services: ${names.join(", ")}`
+          : "No service selected yet.";
+      }
+      if (calcSummary) {
+        calcSummary.textContent = names.length
+          ? `Subtotal: Rs ${subtotal.toFixed(2)} | Offer discount: ${discountPercent.toFixed(2)}% | Points discount: Rs ${pointsDiscount.toFixed(2)} | Payable: Rs ${total.toFixed(2)}`
+          : "";
+      }
+    }
+
+    function applyMaxRedeemablePoints() {
+      if (!pointsField) return;
+      const selectedCustomer = resolveCustomer(customerSearchField.value);
+      if (!selectedCustomer) {
+        alert("Select customer first to redeem points.");
+        return;
+      }
+
+      const availablePoints = parseInt(selectedCustomer.points || 0, 10) || 0;
+      const minPoints = parseInt(pointsField.dataset.minPoints || "100", 10) || 100;
+      const redeemValue = parseFloat(pointsField.dataset.redeemValue || "0.25") || 0.25;
+
+      let subtotal = 0;
+      Array.from(selectedServiceIds).forEach((id) => {
+        subtotal += servicePrices[id] || 0;
+      });
+      const discountPercent = offerField ? (offerDiscounts[offerField.value] || 0) : 0;
+      const discountValue = (subtotal * discountPercent) / 100;
+      const payableBeforePoints = Math.max(0, subtotal - discountValue);
+      const maxByAmount = Math.floor(payableBeforePoints / redeemValue);
+      const maxRedeemable = Math.min(availablePoints, maxByAmount);
+
+      if (maxRedeemable < minPoints) {
+        pointsField.value = 0;
+        calculateAmount();
+        alert(`Minimum ${minPoints} points required for redemption.`);
+        return;
+      }
+
+      pointsField.value = maxRedeemable;
+      calculateAmount();
+    }
+
+    customerSearchField.addEventListener("input", (event) => {
+      customerField.value = "";
+      fetchCustomerSuggestions(event.target.value);
+    });
+    customerSearchField.addEventListener("change", syncCustomerSelection);
+    customerSearchField.addEventListener("blur", syncCustomerSelection);
+    const workerVisitForm = document.getElementById("worker-visit-form");
+    if (workerVisitForm) {
+      workerVisitForm.addEventListener("submit", () => {
+        syncCustomerSelection();
+      });
+    }
+
+    serviceSearchField.addEventListener("input", (event) => {
+      fetchServiceSuggestions(event.target.value);
+    });
+    serviceSearchField.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        addQuickService();
+      }
+    });
+    addServiceBtn.addEventListener("click", addQuickService);
+
+    servicesField.addEventListener("change", () => {
+      selectedServiceIds.clear();
+      Array.from(servicesField.options).forEach((option) => {
+        if (option.selected) {
+          selectedServiceIds.add(String(option.value));
+        }
+      });
+      calculateAmount();
+    });
+    if (offerField) {
+      offerField.addEventListener("change", calculateAmount);
+    }
+    if (pointsField) {
+      pointsField.addEventListener("input", calculateAmount);
+    }
+    if (maxRedeemBtn) {
+      maxRedeemBtn.addEventListener("click", applyMaxRedeemablePoints);
+    }
+    calculateAmount();
+  })();
+</script>
+{% endblock %}

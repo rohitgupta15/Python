@@ -1,0 +1,182 @@
+{% extends "salon/base.html" %}
+
+{% block title %}Owner Dashboard{% endblock %}
+
+{% block content %}
+<section class="premium-hero">
+  <div>
+    <p class="kicker">Owner Control Center</p>
+    <h1>Scale your salon business with one smart dashboard</h1>
+    <p class="hint">Newly created saloons stay pending until approved by admin.</p>
+    <div class="action-row">
+      <a class="btn" href="{% url 'salon_create' %}">Add New Saloon</a>
+      <a class="btn btn-outline" href="{% url 'home' %}">View Public Listings</a>
+      <button class="btn btn-outline settings-toggle-btn" type="button" id="open-dashboard-settings" aria-expanded="false" aria-controls="dashboard-settings-panel">&#9881; Settings</button>
+    </div>
+  </div>
+</section>
+
+<section class="panel settings-panel is-hidden" id="dashboard-settings-panel">
+  <div class="row-head">
+    <h3>Dashboard Builder Settings</h3>
+  </div>
+  <form method="post" class="form-card settings-form-inline">
+    {% csrf_token %}
+    <input type="hidden" name="form_type" value="dashboard_settings" />
+    {{ dashboard_setting_form.as_p }}
+    <button class="btn" type="submit">Save Dashboard Settings</button>
+  </form>
+</section>
+
+<section class="pivot-grid">
+  {% if show_pivot %}
+    <article class="panel">
+      <h3>Pivot Snapshot</h3>
+      <p class="hint">Status-wise breakdown of operations and customer activity.</p>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Status</th>
+              <th>Salons</th>
+              <th>Services</th>
+              <th>Customers</th>
+              <th>Visits</th>
+              <th>Share</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in status_pivot %}
+              <tr>
+                <td>{{ row.label }}</td>
+                <td>{{ row.count }}</td>
+                <td>{{ row.services }}</td>
+                <td>{{ row.customers }}</td>
+                <td>{{ row.visits }}</td>
+                <td>{{ row.share }}%</td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="6">No data available yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </article>
+  {% endif %}
+
+  {% if show_histogram %}
+    <article class="panel">
+      <h3>Visit Histogram</h3>
+      <p class="hint">Distribution of salons based on total visit count.</p>
+      <div class="histogram-wrap">
+        {% for bucket in visit_histogram %}
+          <div class="hist-row">
+            <span class="hist-label">{{ bucket.label }}</span>
+            <div class="hist-track">
+              <div class="hist-bar" style="width: {{ bucket.percent }}%;"></div>
+            </div>
+            <span class="hist-value">{{ bucket.count }}</span>
+          </div>
+        {% empty %}
+          <p class="hint">No data available yet.</p>
+        {% endfor %}
+      </div>
+    </article>
+  {% endif %}
+</section>
+
+{% if show_pie %}
+<section class="panel">
+  <h3>Approval Pie Chart</h3>
+  <p class="hint">Distribution of approved vs pending salons.</p>
+  <div class="pie-layout">
+    <div class="pie-chart" style="background: {{ pie_chart_style }};"></div>
+    <div class="pie-legend">
+      <p><span class="legend-dot approved-dot"></span> Approved: {{ approved_pct }}%</p>
+      <p><span class="legend-dot pending-dot"></span> Pending: {{ pending_pct }}%</p>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{% if show_leaderboard %}
+  <section class="panel">
+    <div class="row-head">
+      <h3>Top Performing Salons</h3>
+    </div>
+    <div class="card-grid compact-grid">
+      {% for salon in top_salons %}
+        <article class="card compact-card">
+          <h4>{{ salon.name }}</h4>
+          <p class="hint">Visits: {{ salon.visit_count }} | Customers: {{ salon.customer_count }}</p>
+          <div class="action-row">
+            <a class="btn btn-outline" href="{% url 'salon_inventory' salon.slug %}">Inventory</a>
+            <a class="btn btn-outline" href="{% url 'salon_reports' salon.slug %}">Reports</a>
+            <a class="btn btn-outline" href="{% url 'salon_visits' salon.slug %}">Visits</a>
+          </div>
+        </article>
+      {% empty %}
+        <p>No salon analytics available yet.</p>
+      {% endfor %}
+    </div>
+  </section>
+{% endif %}
+
+<section class="row-head">
+  <h2>Your Saloons</h2>
+</section>
+
+<div class="card-grid">
+  {% for salon in salons %}
+    <article class="card salon-card">
+      <div class="salon-head">
+        <h3>{{ salon.name }}</h3>
+        {% if salon.is_active %}
+          <span class="badge badge-active">Approved</span>
+        {% else %}
+          <span class="badge">Pending Approval</span>
+        {% endif %}
+      </div>
+      <p>{{ salon.tagline|default:"High quality grooming and beauty experience." }}</p>
+      <div class="mini-kpi-grid">
+        <div><span>Features</span><strong>{{ salon.feature_count }}</strong></div>
+        <div><span>Services</span><strong>{{ salon.service_count }}</strong></div>
+        <div><span>Customers</span><strong>{{ salon.customer_count }}</strong></div>
+        <div><span>Visits</span><strong>{{ salon.visit_count }}</strong></div>
+      </div>
+      <div class="action-row">
+        <a class="btn btn-outline" href="{% url 'salon_edit' salon.slug %}">Manage</a>
+        {% if salon.is_active %}
+          <a class="btn btn-outline" href="{% url 'salon_customers' salon.slug %}">Customers</a>
+          <a class="btn btn-outline" href="{% url 'salon_workers' salon.slug %}">Workers</a>
+          <a class="btn btn-outline" href="{% url 'salon_appointments' salon.slug %}">Appointments</a>
+          <a class="btn btn-outline" href="{% url 'salon_visits' salon.slug %}">Visits</a>
+          <a class="btn btn-outline" href="{% url 'salon_offers' salon.slug %}">Offers</a>
+          <a class="btn btn-outline" href="{% url 'salon_whatsapp_campaign' salon.slug %}">WhatsApp</a>
+          <a class="btn btn-outline" href="{% url 'salon_pos' salon.slug %}">Billing/POS</a>
+          <a class="btn btn-outline" href="{% url 'salon_inventory' salon.slug %}">Inventory</a>
+          <a class="btn btn-outline" href="{% url 'salon_reports' salon.slug %}">Reports</a>
+          <a class="btn btn-outline" href="{% url 'salon_loyalty' salon.slug %}">Loyalty</a>
+          <a class="btn" href="{% url 'salon_public_page' salon.slug %}">Public Page</a>
+        {% else %}
+          <span class="btn btn-disabled">All operations locked until admin approval</span>
+        {% endif %}
+      </div>
+    </article>
+  {% empty %}
+    <p>You do not have any saloon yet.</p>
+  {% endfor %}
+</div>
+<script>
+  (function () {
+    const toggleButton = document.getElementById("open-dashboard-settings");
+    const panel = document.getElementById("dashboard-settings-panel");
+    if (!toggleButton || !panel) return;
+
+    toggleButton.addEventListener("click", function () {
+      const isHidden = panel.classList.toggle("is-hidden");
+      toggleButton.setAttribute("aria-expanded", String(!isHidden));
+    });
+  })();
+</script>
+{% endblock %}

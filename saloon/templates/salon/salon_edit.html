@@ -1,0 +1,363 @@
+{% extends "salon/base.html" %}
+
+{% block title %}Manage {{ salon.name }}{% endblock %}
+
+{% block content %}
+<section class="row-head">
+  <h2>
+    Manage {{ salon.name }}
+    {% if salon.is_active %}
+      <span class="badge badge-active">Approved</span>
+    {% else %}
+      <span class="badge">Pending Approval</span>
+    {% endif %}
+  </h2>
+</section>
+{% include "salon/includes/owner_portal_nav.html" with active_tab="overview" %}
+{% if not salon.is_active %}
+  <div class="message">
+    This saloon is pending admin approval. Public listing stays disabled until admin activates it.
+  </div>
+{% endif %}
+
+<section class="edit-grid">
+  <div class="panel">
+    <h3>Saloon Details</h3>
+    <form method="post" enctype="multipart/form-data" class="form-card">
+      {% csrf_token %}
+      <input type="hidden" name="form_type" value="salon" />
+      {{ salon_form.as_p }}
+      <p>
+        <button class="btn btn-outline" type="button" id="detect-location-btn">Use My Current Location</button>
+      </p>
+      <button class="btn" type="submit">Save Details</button>
+    </form>
+  </div>
+  {% if salon.is_active %}
+
+  <div class="panel">
+    <h3>Webpage + Advanced Experience Configuration</h3>
+    <p class="hint">Use themes, sidebar style, background mode, accent color, and visual intensity slider to make a richer premium experience.</p>
+    <form method="post" enctype="multipart/form-data" class="form-card">
+      {% csrf_token %}
+      <input type="hidden" name="form_type" value="config" />
+      {{ config_form.as_p }}
+      <button class="btn" type="submit">Save Configuration</button>
+    </form>
+  </div>
+
+  <div class="panel">
+    <h3>Add Feature</h3>
+    <form method="post" enctype="multipart/form-data" class="form-card">
+      {% csrf_token %}
+      <input type="hidden" name="form_type" value="feature" />
+      {{ feature_form.as_p }}
+      <label>Feature gallery images (multiple)
+        <input type="file" name="feature_images" accept=".jpg,.jpeg,.png,.webp" multiple />
+      </label>
+      <button class="btn" type="submit">Add Feature</button>
+    </form>
+    <div class="manage-slideshow" id="feature-slideshow">
+      <div class="manage-track">
+        {% for feature in features %}
+          {% if feature.image %}
+            <img src="{{ feature.image.url }}" alt="{{ feature.title }}" class="manage-slide-image" />
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+    <ul class="simple-list">
+      {% for feature in features %}
+        <li>
+          <div>
+            {% if feature.image %}
+              <span class="hover-scroll-frame">
+                <img src="{{ feature.image.url }}" alt="{{ feature.title }}" class="hover-scroll-image" />
+              </span>
+              <br />
+            {% endif %}
+            <strong>{{ feature.title }}</strong><br />
+            <small>{{ feature.description }}</small>
+          </div>
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="form_type" value="delete_feature" />
+            <input type="hidden" name="feature_id" value="{{ feature.id }}" />
+            <button class="btn btn-danger" type="submit">Delete</button>
+          </form>
+        </li>
+      {% empty %}
+        <li>No features added yet.</li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <div class="panel">
+    <h3>Add Service Item</h3>
+    <form method="post" enctype="multipart/form-data" class="form-card">
+      {% csrf_token %}
+      <input type="hidden" name="form_type" value="service" />
+      {{ service_form.as_p }}
+      <label>Service gallery images (multiple)
+        <input type="file" name="service_images" accept=".jpg,.jpeg,.png,.webp" multiple />
+      </label>
+      <button class="btn" type="submit">Add Service</button>
+    </form>
+    <div class="manage-slideshow" id="service-slideshow">
+      <div class="manage-track">
+        {% for service in services %}
+          {% if service.image %}
+            <img src="{{ service.image.url }}" alt="{{ service.name }}" class="manage-slide-image" />
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+    <ul class="simple-list">
+      {% for service in services %}
+        <li>
+          <div>
+            {% if service.image %}
+              <span class="hover-scroll-frame">
+                <img src="{{ service.image.url }}" alt="{{ service.name }}" class="hover-scroll-image" />
+              </span>
+              <br />
+            {% endif %}
+            <strong>{{ service.name }}</strong> ({{ service.duration_minutes }} min) - Rs {{ service.price|floatformat:2 }}<br />
+            <small>{{ service.category }} | {{ service.description }}</small>
+          </div>
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="form_type" value="delete_service" />
+            <input type="hidden" name="service_id" value="{{ service.id }}" />
+            <button class="btn btn-danger" type="submit">Delete</button>
+          </form>
+        </li>
+      {% empty %}
+        <li>No services added yet.</li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <div class="panel">
+    <h3>Website Sections (Drag & Drop)</h3>
+    <form method="post" class="form-card">
+      {% csrf_token %}
+      <input type="hidden" name="form_type" value="section" />
+      {{ section_form.as_p }}
+      <button class="btn" type="submit">Add Section</button>
+    </form>
+    <div>
+      <ul class="simple-list sortable-list" id="sortable-sections">
+        {% for section in sections %}
+          <li draggable="true" data-id="{{ section.id }}">
+            <div>
+              <strong>{{ section.heading }}</strong><br />
+              <small>{{ section.get_section_type_display }} | Order: {{ section.display_order }}</small>
+            </div>
+            <div class="action-row">
+              <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="form_type" value="delete_section" />
+                <input type="hidden" name="section_id" value="{{ section.id }}" />
+                <button class="btn btn-danger" type="submit">Delete</button>
+              </form>
+            </div>
+          </li>
+        {% empty %}
+          <li>No sections added.</li>
+        {% endfor %}
+      </ul>
+      <form method="post" id="section-order-form">
+        {% csrf_token %}
+        <input type="hidden" name="form_type" value="reorder_sections" />
+        <input type="hidden" name="section_order" id="section-order-input" />
+      {% if sections %}
+        <button class="btn btn-outline" type="submit">Save Section Order</button>
+      {% endif %}
+      </form>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>Before / After Gallery</h3>
+    <form method="post" enctype="multipart/form-data" class="form-card">
+      {% csrf_token %}
+      <input type="hidden" name="form_type" value="gallery" />
+      {{ gallery_form.as_p }}
+      <button class="btn" type="submit">Add Gallery Item</button>
+    </form>
+    <ul class="simple-list">
+      {% for item in gallery_items %}
+        <li>
+          <div>
+            <strong>{{ item.title|default:"Transformation" }}</strong><br />
+            <small>{{ item.description }}</small>
+          </div>
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="form_type" value="delete_gallery" />
+            <input type="hidden" name="gallery_id" value="{{ item.id }}" />
+            <button class="btn btn-danger" type="submit">Delete</button>
+          </form>
+        </li>
+      {% empty %}
+        <li>No gallery items.</li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <div class="panel">
+    <h3>Testimonials</h3>
+    <form method="post" class="form-card">
+      {% csrf_token %}
+      <input type="hidden" name="form_type" value="testimonial" />
+      {{ testimonial_form.as_p }}
+      <button class="btn" type="submit">Add Testimonial</button>
+    </form>
+    <ul class="simple-list">
+      {% for item in testimonials %}
+        <li>
+          <div>
+            <strong>{{ item.customer_name }}</strong> - {{ item.rating }}/5<br />
+            <small>{{ item.text }}</small>
+          </div>
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="form_type" value="delete_testimonial" />
+            <input type="hidden" name="testimonial_id" value="{{ item.id }}" />
+            <button class="btn btn-danger" type="submit">Delete</button>
+          </form>
+        </li>
+      {% empty %}
+        <li>No testimonials added.</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% else %}
+  <div class="panel">
+    <h3>Approval Pending</h3>
+    <p class="hint">Only basic saloon details can be updated until admin approves this saloon.</p>
+  </div>
+  {% endif %}
+</section>
+<style>
+.manage-slideshow {
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  margin: 8px 0 12px;
+  background: #f8fafc;
+}
+.manage-track {
+  display: flex;
+  gap: 10px;
+  width: max-content;
+  padding: 10px;
+  transition: transform 0.2s linear;
+}
+.manage-slide-image {
+  width: 110px;
+  height: 70px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid #d1d5db;
+}
+.hover-scroll-frame {
+  width: 58px;
+  height: 58px;
+  display: inline-block;
+  overflow: hidden;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+}
+.hover-scroll-image {
+  width: 100%;
+  height: 90px;
+  object-fit: cover;
+  transform: translateY(0);
+  transition: transform 1.8s linear;
+}
+.hover-scroll-frame:hover .hover-scroll-image {
+  transform: translateY(-30px);
+}
+</style>
+<script>
+  (function () {
+    const latInput = document.getElementById("id_latitude");
+    const lngInput = document.getElementById("id_longitude");
+    const detectBtn = document.getElementById("detect-location-btn");
+    detectBtn?.addEventListener("click", function () {
+      if (!latInput || !lngInput) return;
+      if (!navigator.geolocation) {
+        alert("Geolocation is not supported in this browser.");
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        function (position) {
+          latInput.value = position.coords.latitude.toFixed(6);
+          lngInput.value = position.coords.longitude.toFixed(6);
+        },
+        function () {
+          alert("Unable to fetch your current location.");
+        },
+        { enableHighAccuracy: true, timeout: 12000 }
+      );
+    });
+
+    function enableAutoScroll(slideshowId) {
+      const slideshow = document.getElementById(slideshowId);
+      if (!slideshow) return;
+      let timer = null;
+      function start() {
+        if (timer) return;
+        timer = setInterval(() => {
+          slideshow.scrollLeft += 1;
+          if (slideshow.scrollLeft + slideshow.clientWidth >= slideshow.scrollWidth - 1) {
+            slideshow.scrollLeft = 0;
+          }
+        }, 24);
+      }
+      function stop() {
+        if (!timer) return;
+        clearInterval(timer);
+        timer = null;
+      }
+      slideshow.addEventListener("mouseenter", stop);
+      slideshow.addEventListener("mouseleave", start);
+      start();
+    }
+    enableAutoScroll("feature-slideshow");
+    enableAutoScroll("service-slideshow");
+
+    const list = document.getElementById("sortable-sections");
+    const orderInput = document.getElementById("section-order-input");
+    if (!list || !orderInput) return;
+    let draggedItem = null;
+    list.querySelectorAll("li[draggable='true']").forEach((item) => {
+      item.addEventListener("dragstart", () => {
+        draggedItem = item;
+        item.classList.add("dragging");
+      });
+      item.addEventListener("dragend", () => {
+        item.classList.remove("dragging");
+        draggedItem = null;
+      });
+      item.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        if (!draggedItem || draggedItem === item) return;
+        const rect = item.getBoundingClientRect();
+        const offset = e.clientY - rect.top;
+        if (offset > rect.height / 2) {
+          item.after(draggedItem);
+        } else {
+          item.before(draggedItem);
+        }
+      });
+    });
+    document.getElementById("section-order-form")?.addEventListener("submit", () => {
+      const ids = Array.from(list.querySelectorAll("li[data-id]")).map((li) => li.dataset.id);
+      orderInput.value = ids.join(",");
+    });
+  })();
+</script>
+{% endblock %}

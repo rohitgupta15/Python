@@ -1,0 +1,100 @@
+{% extends "salon/base.html" %}
+
+{% block title %}Receipt {{ bill.bill_number }}{% endblock %}
+
+{% block content %}
+<section class="panel">
+  <div class="receipt-header">
+    <div>
+      <h2>{{ salon.name }}</h2>
+      {% if salon.address %}<p class="muted">{{ salon.address }}</p>{% endif %}
+      {% if salon.phone %}<p>Phone: {{ salon.phone }}</p>{% endif %}
+      {% if salon.email %}<p>Email: {{ salon.email }}</p>{% endif %}
+    </div>
+    <button class="btn btn-outline no-print" onclick="window.print()">Print / Save PDF</button>
+  </div>
+
+  <div class="receipt-meta">
+    <div><strong>Receipt #</strong> {{ bill.bill_number }}</div>
+    <div><strong>Date</strong> {{ bill.bill_date|date:"d-m-Y h:i A" }}</div>
+    <div>
+      <strong>Customer</strong><br />
+      {{ bill.customer.full_name|default:"Walk-in Customer" }}
+      {% if bill.customer %}<br />{{ bill.customer.phone }}{% endif %}
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th class="text-center">Qty</th>
+          <th class="text-right">Rate</th>
+          <th class="text-right">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+          <tr>
+            <td>{{ item.item_name }}</td>
+            <td class="text-center">{{ item.quantity }}</td>
+            <td class="text-right">₹{{ item.unit_price|floatformat:2 }}</td>
+            <td class="text-right">₹{{ item.line_total|floatformat:2 }}</td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="4" class="text-center">No items recorded.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="invoice-summary">
+    <p class="summary-row"><span>Subtotal</span><span>₹{{ bill.subtotal|floatformat:2 }}</span></p>
+    {% if bill.discount_amount > 0 %}
+      <p class="summary-row"><span>Discount</span><span>-₹{{ bill.discount_amount|floatformat:2 }}</span></p>
+    {% endif %}
+    {% if bill.tax_percent > 0 %}
+      <p class="summary-row"><span>Tax ({{ bill.tax_percent }}%)</span><span>₹{{ bill.tax_amount|floatformat:2 }}</span></p>
+    {% endif %}
+    <p class="summary-row total"><span>Grand Total</span><span>₹{{ bill.total_amount|floatformat:2 }}</span></p>
+    <p class="summary-row"><span>Payment Method</span><span>{{ bill.get_payment_method_display }}</span></p>
+    <p class="summary-row"><span>Status</span><span>{{ bill.get_payment_status_display }}</span></p>
+    {% if bill.amount_received > 0 %}
+      <p class="summary-row"><span>Received</span><span>₹{{ bill.amount_received|floatformat:2 }}</span></p>
+    {% endif %}
+    {% if bill.balance_due > 0 %}
+      <p class="summary-row"><span>Balance Due</span><span>₹{{ bill.balance_due|floatformat:2 }}</span></p>
+    {% endif %}
+  </div>
+
+  {% if bill.points_earned > 0 or bill.points_redeemed > 0 %}
+  <div class="loyalty-summary">
+    <h4>Loyalty Points</h4>
+    {% if bill.points_earned > 0 %}<p>Earned: +{{ bill.points_earned }} pts</p>{% endif %}
+    {% if bill.points_redeemed > 0 %}<p>Redeemed: -{{ bill.points_redeemed }} pts (₹{{ bill.points_discount|floatformat:2 }})</p>{% endif %}
+  </div>
+  {% endif %}
+
+  <p class="hint muted">Thank you for visiting {{ salon.name }}.</p>
+</section>
+
+<style>
+.receipt-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; }
+.receipt-meta { display:flex; gap:2rem; background:#f8f9fa; padding:1rem; border-radius:8px; margin-bottom:1rem; }
+.receipt-meta div { flex:1; }
+.summary-row { display:flex; justify-content:space-between; margin:0.25rem 0; }
+.summary-row.total { font-weight:700; color:#d97706; }
+.invoice-summary { background:#fff; padding:1rem; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.05); margin-top:1rem; }
+.loyalty-summary { background:#fff3cd; padding:1rem; border-radius:8px; margin-top:1rem; }
+.hint.muted { color:#6b7280; margin-top:1rem; }
+.text-right { text-align:right; }
+.text-center { text-align:center; }
+.no-print { display:inline-flex; }
+@media print {
+  .no-print { display:none; }
+}
+</style>
+{% endblock %}

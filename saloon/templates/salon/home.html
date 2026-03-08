@@ -1,0 +1,111 @@
+{% extends "salon/base.html" %}
+
+{% block title %}Saloon Home{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <h1>Find and Manage Modern Saloons</h1>
+  <p>Each saloon can publish a unique page, add features, and maintain detailed service lists.</p>
+</section>
+
+<section>
+  <h2>Available Saloons</h2>
+  <div class="widget-grid">
+    <article class="widget-card">
+      <p>Active Listings</p>
+      <h3>{{ total_salons_count }}</h3>
+    </article>
+    <article class="widget-card">
+      <p>Filter Category</p>
+      <h3>{% if selected_feature %}1{% else %}All{% endif %}</h3>
+    </article>
+    <article class="widget-card">
+      <p>Discovery Mode</p>
+      <h3>{% if selected_feature %}Focused{% else %}Explore{% endif %}</h3>
+    </article>
+  </div>
+  <form method="get" class="filter-row">
+    <select name="feature">
+      <option value="">All Features</option>
+      {% for feature in feature_options %}
+        <option value="{{ feature }}" {% if selected_feature == feature %}selected{% endif %}>{{ feature }}</option>
+      {% endfor %}
+    </select>
+    <select name="per_page">
+      {% for size in allowed_page_sizes %}
+        <option value="{{ size }}" {% if page_size == size %}selected{% endif %}>{{ size }} per page</option>
+      {% endfor %}
+    </select>
+    <input type="hidden" name="lat" id="home-lat" value="{{ user_lat }}" />
+    <input type="hidden" name="lng" id="home-lng" value="{{ user_lng }}" />
+    <button class="btn btn-outline" type="submit">Filter</button>
+    <button class="btn btn-outline" type="button" id="nearby-btn">Near Me</button>
+    {% if selected_feature %}
+      <a class="btn btn-outline" href="{% url 'home' %}">Clear</a>
+    {% elif is_nearby_mode %}
+      <a class="btn btn-outline" href="{% url 'home' %}">Clear</a>
+    {% endif %}
+  </form>
+  {% if is_nearby_mode %}
+    <p class="hint">Nearby mode enabled. Closest salons are shown first.</p>
+  {% endif %}
+
+  <div class="card-grid">
+    {% for salon in salons %}
+      <article class="card">
+        <h3>{{ salon.name }}</h3>
+        <p>{{ salon.tagline|default:"Professional grooming and beauty services." }}</p>
+        <p><strong>Services:</strong> {{ salon.service_count }}</p>
+        <p><strong>Features:</strong> {{ salon.feature_count }}</p>
+        {% if salon.distance_km is not None %}
+          <p><strong>Distance:</strong> {{ salon.distance_km|floatformat:1 }} km</p>
+        {% endif %}
+        <a class="btn" href="{% url 'salon_public_page' salon.slug %}">View Page</a>
+        {% if salon.location_map_url %}
+          <a class="btn btn-outline" href="{{ salon.location_map_url }}" target="_blank" rel="noopener noreferrer">Open Map</a>
+        {% elif salon.latitude is not None and salon.longitude is not None %}
+          <a class="btn btn-outline" href="https://www.google.com/maps?q={{ salon.latitude }},{{ salon.longitude }}" target="_blank" rel="noopener noreferrer">Open Map</a>
+        {% endif %}
+      </article>
+    {% empty %}
+      <p>No saloons found for selected filter.</p>
+    {% endfor %}
+  </div>
+  {% if salons_page.paginator.num_pages > 1 %}
+    <div class="pagination">
+      {% if salons_page.has_previous %}
+        <a class="btn btn-outline" href="?page={{ salons_page.previous_page_number }}&per_page={{ page_size }}{% if selected_feature %}&feature={{ selected_feature|urlencode }}{% endif %}{% if user_lat %}&lat={{ user_lat|urlencode }}{% endif %}{% if user_lng %}&lng={{ user_lng|urlencode }}{% endif %}">Previous</a>
+      {% endif %}
+      <span class="hint">Page {{ salons_page.number }} of {{ salons_page.paginator.num_pages }}</span>
+      {% if salons_page.has_next %}
+        <a class="btn btn-outline" href="?page={{ salons_page.next_page_number }}&per_page={{ page_size }}{% if selected_feature %}&feature={{ selected_feature|urlencode }}{% endif %}{% if user_lat %}&lat={{ user_lat|urlencode }}{% endif %}{% if user_lng %}&lng={{ user_lng|urlencode }}{% endif %}">Next</a>
+      {% endif %}
+    </div>
+  {% endif %}
+</section>
+<script>
+  (function () {
+    const nearbyBtn = document.getElementById("nearby-btn");
+    const latInput = document.getElementById("home-lat");
+    const lngInput = document.getElementById("home-lng");
+    if (!nearbyBtn || !latInput || !lngInput) return;
+    nearbyBtn.addEventListener("click", function () {
+      if (!navigator.geolocation) {
+        alert("Geolocation not supported in this browser.");
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        function (position) {
+          latInput.value = position.coords.latitude.toFixed(6);
+          lngInput.value = position.coords.longitude.toFixed(6);
+          nearbyBtn.closest("form")?.submit();
+        },
+        function () {
+          alert("Unable to fetch your location.");
+        },
+        { enableHighAccuracy: true, timeout: 12000 }
+      );
+    });
+  })();
+</script>
+{% endblock %}

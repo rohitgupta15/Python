@@ -1,0 +1,83 @@
+{% extends "salon/base.html" %}
+
+{% block title %}WhatsApp Campaign - {{ salon.name }}{% endblock %}
+
+{% block content %}
+<section class="row-head">
+  <h2>WhatsApp Bulk Notification: {{ salon.name }}</h2>
+</section>
+{% include "salon/includes/owner_portal_nav.html" with active_tab="whatsapp" %}
+
+<section class="edit-grid">
+  <div class="panel">
+    <h3>Create Campaign</h3>
+    <form method="post" class="form-card">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button class="btn" type="submit">Send Bulk WhatsApp Notification</button>
+    </form>
+    <p class="hint">Messages are dispatched via WhatsApp Cloud API; ensure credentials are configured.</p>
+  </div>
+
+  <div class="panel">
+    <h3>Recent Campaigns</h3>
+    <ul class="simple-list">
+      {% for item in recent_campaigns %}
+        <li>
+          <div>
+            <strong>{{ item.title }}</strong><br />
+            <small>{{ item.get_target_filter_display }} | Sent count: {{ item.sent_count }}</small>
+          </div>
+        </li>
+      {% empty %}
+        <li>No campaigns yet.</li>
+      {% endfor %}
+    </ul>
+  </div>
+</section>
+
+{% if bulk_status %}
+<section class="panel">
+  <h3>WhatsApp Cloud API Status</h3>
+  <p>Messages dispatched via WhatsApp Cloud API.</p>
+  <p>Sent: {{ bulk_status.sent }}</p>
+  {% if bulk_status.failed %}
+    <p>Failed deliveries: {{ bulk_status.failed|length }}</p>
+    <ul class="simple-list">
+      {% for failure in bulk_status.failed %}
+        <li>{{ failure.customer_name }} ({{ failure.phone }}) — {{ failure.reason }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+  {% if bulk_status.skipped %}
+    <p>Skipped (missing WhatsApp number): {{ bulk_status.skipped|length }}</p>
+  {% endif %}
+</section>
+{% elif campaign %}
+<section class="panel">
+  <h3>Generated Links for "{{ campaign.title }}"</h3>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Customer</th>
+          <th>Phone</th>
+          <th>WhatsApp</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in preview_links %}
+          <tr>
+            <td>{{ item.customer.full_name }}</td>
+            <td>{{ item.customer.whatsapp_number }}</td>
+            <td><a class="btn" href="{{ item.url }}" target="_blank">Open Chat</a></td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="3">No eligible customers with WhatsApp number.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

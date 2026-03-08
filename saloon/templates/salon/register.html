@@ -1,0 +1,14 @@
+{% extends "salon/base.html" %}
+
+{% block title %}Register{% endblock %}
+
+{% block content %}
+<section class="auth-wrap">
+  <h2>Create Owner Account</h2>
+  <form method="post" class="form-card">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button class="btn" type="submit">Register</button>
+  </form>
+</section>
+{% endblock %}
